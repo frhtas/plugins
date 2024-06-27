@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 import 'animate_camera.dart';
+import 'clustering.dart';
 import 'lite_mode.dart';
 import 'map_click.dart';
 import 'map_coordinates.dart';
+import 'map_map_id.dart';
 import 'map_ui.dart';
 import 'marker_icons.dart';
 import 'move_camera.dart';
@@ -39,6 +43,8 @@ final List<GoogleMapExampleAppPage> _allPages = <GoogleMapExampleAppPage>[
   const SnapshotPage(),
   const LiteModePage(),
   const TileOverlayPage(),
+  const ClusteringPage(),
+  const MapIdPage(),
 ];
 
 /// MapsDemo is the Main Application.
@@ -74,5 +80,32 @@ void main() {
   final GoogleMapsFlutterPlatform platform = GoogleMapsFlutterPlatform.instance;
   // Default to Hybrid Composition for the example.
   (platform as GoogleMapsFlutterAndroid).useAndroidViewSurface = true;
+  initializeMapRenderer();
   runApp(const MaterialApp(home: MapsDemo()));
+}
+
+Completer<AndroidMapRenderer?>? _initializedRendererCompleter;
+
+/// Initializes map renderer to the `latest` renderer type.
+///
+/// The renderer must be requested before creating GoogleMap instances,
+/// as the renderer can be initialized only once per application context.
+Future<AndroidMapRenderer?> initializeMapRenderer() async {
+  if (_initializedRendererCompleter != null) {
+    return _initializedRendererCompleter!.future;
+  }
+
+  final Completer<AndroidMapRenderer?> completer =
+      Completer<AndroidMapRenderer?>();
+  _initializedRendererCompleter = completer;
+
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final GoogleMapsFlutterPlatform platform = GoogleMapsFlutterPlatform.instance;
+  unawaited((platform as GoogleMapsFlutterAndroid)
+      .initializeWithRenderer(AndroidMapRenderer.latest)
+      .then((AndroidMapRenderer initializedRenderer) =>
+          completer.complete(initializedRenderer)));
+
+  return completer.future;
 }

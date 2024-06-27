@@ -6,12 +6,20 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:mirrors';
 
+import 'package:yaml/yaml.dart' as yaml;
+
 import 'ast.dart';
 
 /// The current version of pigeon.
 ///
 /// This must match the version in pubspec.yaml.
-const String pigeonVersion = '10.1.3';
+const String pigeonVersion = '20.0.2';
+
+/// Prefix for all local variables in methods.
+///
+/// This lowers the chances of variable name collisions with
+/// user defined parameters.
+const String varNamePrefix = '__pigeon_';
 
 /// Read all the content from [stdin] to a String.
 String readStdin() {
@@ -29,7 +37,7 @@ bool debugGenerators = false;
 
 /// A helper class for managing indentation, wrapping a [StringSink].
 class Indent {
-  /// Constructor which takes a [StringSink] [Ident] will wrap.
+  /// Constructor which takes a [StringSink] [Indent] will wrap.
   Indent(this._sink);
 
   int _count = 0;
@@ -162,10 +170,25 @@ class Indent {
   }
 }
 
-/// Create the generated channel name for a [func] on a [api].
-String makeChannelName(Api api, Method func) {
-  return 'dev.flutter.pigeon.${api.name}.${func.name}';
+/// Create the generated channel name for a [method] on an [api].
+String makeChannelName(Api api, Method method, String dartPackageName) {
+  return makeChannelNameWithStrings(
+    apiName: api.name,
+    methodName: method.name,
+    dartPackageName: dartPackageName,
+  );
 }
+
+/// Create the generated channel name for a method on an api.
+String makeChannelNameWithStrings({
+  required String apiName,
+  required String methodName,
+  required String dartPackageName,
+}) {
+  return 'dev.flutter.pigeon.$dartPackageName.$apiName.$methodName';
+}
+
+// TODO(tarrinneal): Determine whether HostDataType is needed.
 
 /// Represents the mapping of a Dart datatype to a Host datatype.
 class HostDatatype {
@@ -174,6 +197,7 @@ class HostDatatype {
     required this.datatype,
     required this.isBuiltin,
     required this.isNullable,
+    required this.isEnum,
   });
 
   /// The [String] that can be printed into host code to represent the type.
@@ -184,6 +208,9 @@ class HostDatatype {
 
   /// `true` if the type corresponds to a nullable Dart datatype.
   final bool isNullable;
+
+  /// `true if the type is a custom enum.
+  final bool isEnum;
 }
 
 /// Calculates the [HostDatatype] for the provided [NamedType].
@@ -193,10 +220,10 @@ class HostDatatype {
 /// datatype for the Dart datatype for builtin types.
 ///
 /// [customResolver] can modify the datatype of custom types.
-HostDatatype getFieldHostDatatype(NamedType field, List<Class> classes,
-    List<Enum> enums, String? Function(TypeDeclaration) builtinResolver,
+HostDatatype getFieldHostDatatype(
+    NamedType field, String? Function(TypeDeclaration) builtinResolver,
     {String Function(String)? customResolver}) {
-  return _getHostDatatype(field.type, classes, enums, builtinResolver,
+  return _getHostDatatype(field.type, builtinResolver,
       customResolver: customResolver, fieldName: field.name);
 }
 
@@ -207,37 +234,49 @@ HostDatatype getFieldHostDatatype(NamedType field, List<Class> classes,
 /// datatype for the Dart datatype for builtin types.
 ///
 /// [customResolver] can modify the datatype of custom types.
-HostDatatype getHostDatatype(TypeDeclaration type, List<Class> classes,
-    List<Enum> enums, String? Function(TypeDeclaration) builtinResolver,
+HostDatatype getHostDatatype(
+    TypeDeclaration type, String? Function(TypeDeclaration) builtinResolver,
     {String Function(String)? customResolver}) {
-  return _getHostDatatype(type, classes, enums, builtinResolver,
+  return _getHostDatatype(type, builtinResolver,
       customResolver: customResolver);
 }
 
-HostDatatype _getHostDatatype(TypeDeclaration type, List<Class> classes,
-    List<Enum> enums, String? Function(TypeDeclaration) builtinResolver,
+HostDatatype _getHostDatatype(
+    TypeDeclaration type, String? Function(TypeDeclaration) builtinResolver,
     {String Function(String)? customResolver, String? fieldName}) {
   final String? datatype = builtinResolver(type);
   if (datatype == null) {
-    if (classes.map((Class x) => x.name).contains(type.baseName)) {
+    if (type.isClass) {
       final String customName = customResolver != null
           ? customResolver(type.baseName)
           : type.baseName;
       return HostDatatype(
-          datatype: customName, isBuiltin: false, isNullable: type.isNullable);
-    } else if (enums.map((Enum x) => x.name).contains(type.baseName)) {
+        datatype: customName,
+        isBuiltin: false,
+        isNullable: type.isNullable,
+        isEnum: false,
+      );
+    } else if (type.isEnum) {
       final String customName = customResolver != null
           ? customResolver(type.baseName)
           : type.baseName;
       return HostDatatype(
-          datatype: customName, isBuiltin: false, isNullable: type.isNullable);
+        datatype: customName,
+        isBuiltin: false,
+        isNullable: type.isNullable,
+        isEnum: true,
+      );
     } else {
       throw Exception(
           'unrecognized datatype ${fieldName == null ? '' : 'for field:"$fieldName" '}of type:"${type.baseName}"');
     }
   } else {
     return HostDatatype(
-        datatype: datatype, isBuiltin: true, isNullable: type.isNullable);
+      datatype: datatype,
+      isBuiltin: true,
+      isNullable: type.isNullable,
+      isEnum: false,
+    );
   }
 }
 
@@ -261,6 +300,24 @@ String getGeneratedCodeWarning() {
 
 /// String to be printed after `getGeneratedCodeWarning()'s warning`.
 const String seeAlsoWarning = 'See also: https://pub.dev/packages/pigeon';
+
+/// Prefix for utility classes generated for ProxyApis.
+///
+/// This lowers the chances of variable name collisions with user defined
+/// parameters.
+const String classNamePrefix = 'Pigeon';
+
+/// Name for the generated InstanceManager for ProxyApis.
+///
+/// This lowers the chances of variable name collisions with user defined
+/// parameters.
+const String instanceManagerClassName = '${classNamePrefix}InstanceManager';
+
+/// Prefix for class member names not defined by the user.
+///
+/// This lowers the chances of variable name collisions with user defined
+/// parameters.
+const String classMemberNamePrefix = 'pigeon_';
 
 /// Collection of keys used in dictionaries across generators.
 class Keys {
@@ -289,7 +346,7 @@ bool isVoid(TypeMirror type) {
 void addLines(Indent indent, Iterable<String> lines, {String? linePrefix}) {
   final String prefix = linePrefix ?? '';
   for (final String line in lines) {
-    indent.writeln('$prefix$line');
+    indent.writeln(line.isNotEmpty ? '$prefix$line' : prefix.trimRight());
   }
 }
 
@@ -324,16 +381,26 @@ Map<String, Object> mergeMaps(
   return result;
 }
 
-/// A class name that is enumerated.
-class EnumeratedClass {
+/// A type name that is enumerated.
+class EnumeratedType {
   /// Constructor.
-  EnumeratedClass(this.name, this.enumeration);
+  EnumeratedType(this.name, this.enumeration, this.type,
+      {this.associatedClass, this.associatedEnum});
 
-  /// The name of the class.
+  /// The name of the type.
   final String name;
 
   /// The enumeration of the class.
   final int enumeration;
+
+  /// The type of custom type of the enumerated type.
+  final CustomTypes type;
+
+  /// The associated Class that is represented by the [EnumeratedType].
+  final Class? associatedClass;
+
+  /// The associated Enum that is represented by the [EnumeratedType].
+  final Enum? associatedEnum;
 }
 
 /// Supported basic datatypes.
@@ -353,7 +420,7 @@ const List<String> validTypes = <String>[
 
 /// Custom codecs' custom types are enumerated from 255 down to this number to
 /// avoid collisions with the StandardMessageCodec.
-const int _minimumCodecFieldKey = 128;
+const int _minimumCodecFieldKey = 129;
 
 Iterable<TypeDeclaration> _getTypeArguments(TypeDeclaration type) sync* {
   for (final TypeDeclaration typeArg in type.typeArguments) {
@@ -394,10 +461,23 @@ Map<TypeDeclaration, List<int>> getReferencedTypes(
   final _Bag<TypeDeclaration, int> references = _Bag<TypeDeclaration, int>();
   for (final Api api in apis) {
     for (final Method method in api.methods) {
-      for (final NamedType field in method.arguments) {
+      for (final NamedType field in method.parameters) {
         references.addMany(_getTypeArguments(field.type), field.offset);
       }
       references.addMany(_getTypeArguments(method.returnType), method.offset);
+    }
+    if (api is AstProxyApi) {
+      for (final Constructor constructor in api.constructors) {
+        for (final NamedType parameter in constructor.parameters) {
+          references.addMany(
+            _getTypeArguments(parameter.type),
+            parameter.offset,
+          );
+        }
+      }
+      for (final ApiField field in api.fields) {
+        references.addMany(_getTypeArguments(field.type), field.offset);
+      }
     }
   }
 
@@ -424,45 +504,44 @@ Map<TypeDeclaration, List<int>> getReferencedTypes(
   return references.map;
 }
 
-/// Returns true if the concrete type cannot be determined at compile-time.
-bool _isConcreteTypeAmbiguous(TypeDeclaration type) {
-  return (type.baseName == 'List' && type.typeArguments.isEmpty) ||
-      (type.baseName == 'Map' && type.typeArguments.isEmpty) ||
-      type.baseName == 'Object';
+/// All custom definable data types.
+enum CustomTypes {
+  /// A custom Class.
+  customClass,
+
+  /// A custom Enum.
+  customEnum,
 }
 
-/// Given an [Api], return the enumerated classes that must exist in the codec
+/// Return the enumerated types that must exist in the codec
 /// where the enumeration should be the key used in the buffer.
-Iterable<EnumeratedClass> getCodecClasses(Api api, Root root) sync* {
-  final Set<String> enumNames = root.enums.map((Enum e) => e.name).toSet();
-  final Map<TypeDeclaration, List<int>> referencedTypes =
-      getReferencedTypes(<Api>[api], root.classes);
-  final Iterable<String> allTypeNames =
-      referencedTypes.keys.any(_isConcreteTypeAmbiguous)
-          ? root.classes.map((Class aClass) => aClass.name)
-          : referencedTypes.keys.map((TypeDeclaration e) => e.baseName);
-  final List<String> sortedNames = allTypeNames
-      .where((String element) =>
-          element != 'void' &&
-          !validTypes.contains(element) &&
-          !enumNames.contains(element))
-      .toList();
-  sortedNames.sort();
-  int enumeration = _minimumCodecFieldKey;
+Iterable<EnumeratedType> getEnumeratedTypes(Root root) sync* {
   const int maxCustomClassesPerApi = 255 - _minimumCodecFieldKey;
-  if (sortedNames.length > maxCustomClassesPerApi) {
+  if (root.classes.length + root.enums.length > maxCustomClassesPerApi) {
     throw Exception(
-        "Pigeon doesn't support more than $maxCustomClassesPerApi referenced custom classes per API, try splitting up your APIs.");
+        "Pigeon doesn't currently support more than $maxCustomClassesPerApi referenced custom classes per file.");
   }
-  for (final String name in sortedNames) {
-    yield EnumeratedClass(name, enumeration);
-    enumeration += 1;
+  int index = 0;
+  for (final Class customClass in root.classes) {
+    yield EnumeratedType(
+      customClass.name,
+      index + _minimumCodecFieldKey,
+      CustomTypes.customClass,
+      associatedClass: customClass,
+    );
+    index += 1;
+  }
+
+  for (final Enum customEnum in root.enums) {
+    yield EnumeratedType(
+      customEnum.name,
+      index + _minimumCodecFieldKey,
+      CustomTypes.customEnum,
+      associatedEnum: customEnum,
+    );
+    index += 1;
   }
 }
-
-/// Returns true if the [TypeDeclaration] represents an enum.
-bool isEnum(Root root, TypeDeclaration type) =>
-    root.enums.map((Enum e) => e.name).contains(type.baseName);
 
 /// Describes how to format a document comment.
 class DocumentCommentSpecification {
@@ -494,6 +573,23 @@ void addDocumentationComments(
   DocumentCommentSpecification commentSpec, {
   List<String> generatorComments = const <String>[],
 }) {
+  asDocumentationComments(
+    comments,
+    commentSpec,
+    generatorComments: generatorComments,
+  ).forEach(indent.writeln);
+}
+
+/// Formats documentation comments and adds them to current Indent.
+///
+/// The [comments] list is meant for comments written in the input dart file.
+/// The [generatorComments] list is meant for comments added by the generators.
+/// Include white space for all tokens when called, no assumptions are made.
+Iterable<String> asDocumentationComments(
+  Iterable<String> comments,
+  DocumentCommentSpecification commentSpec, {
+  List<String> generatorComments = const <String>[],
+}) sync* {
   final List<String> allComments = <String>[
     ...comments,
     if (comments.isNotEmpty && generatorComments.isNotEmpty) '',
@@ -502,31 +598,79 @@ void addDocumentationComments(
   String currentLineOpenToken = commentSpec.openCommentToken;
   if (allComments.length > 1) {
     if (commentSpec.closeCommentToken != '') {
-      indent.writeln(commentSpec.openCommentToken);
+      yield commentSpec.openCommentToken;
       currentLineOpenToken = commentSpec.blockContinuationToken;
     }
     for (String line in allComments) {
       if (line.isNotEmpty && line[0] != ' ') {
         line = ' $line';
       }
-      indent.writeln(
-        '$currentLineOpenToken$line',
-      );
+      yield '$currentLineOpenToken$line';
     }
     if (commentSpec.closeCommentToken != '') {
-      indent.writeln(commentSpec.closeCommentToken);
+      yield commentSpec.closeCommentToken;
     }
   } else if (allComments.length == 1) {
-    indent.writeln(
-      '$currentLineOpenToken${allComments.first}${commentSpec.closeCommentToken}',
-    );
+    yield '$currentLineOpenToken${allComments.first}${commentSpec.closeCommentToken}';
   }
 }
 
-/// Returns an ordered list of fields to provide consistent serialisation order.
-Iterable<NamedType> getFieldsInSerializationOrder(Class klass) {
+/// Returns an ordered list of fields to provide consistent serialization order.
+Iterable<NamedType> getFieldsInSerializationOrder(Class classDefinition) {
   // This returns the fields in the order they are declared in the pigeon file.
-  return klass.fields;
+  return classDefinition.fields;
+}
+
+/// Crawls up the path of [dartFilePath] until it finds a pubspec.yaml in a
+/// parent directory and returns its path.
+String? _findPubspecPath(String dartFilePath) {
+  try {
+    Directory dir = File(dartFilePath).parent;
+    String? pubspecPath;
+    while (pubspecPath == null) {
+      if (dir.existsSync()) {
+        final Iterable<String> pubspecPaths = dir
+            .listSync()
+            .map((FileSystemEntity e) => e.path)
+            .where((String path) => path.endsWith('pubspec.yaml'));
+        if (pubspecPaths.isNotEmpty) {
+          pubspecPath = pubspecPaths.first;
+        } else {
+          dir = dir.parent;
+        }
+      } else {
+        break;
+      }
+    }
+    return pubspecPath;
+  } catch (ex) {
+    return null;
+  }
+}
+
+/// Given the path of a Dart file, [mainDartFile], the name of the package will
+/// be deduced by locating and parsing its associated pubspec.yaml.
+String? deducePackageName(String mainDartFile) {
+  final String? pubspecPath = _findPubspecPath(mainDartFile);
+  if (pubspecPath == null) {
+    return null;
+  }
+
+  try {
+    final String text = File(pubspecPath).readAsStringSync();
+    return (yaml.loadYaml(text) as Map<dynamic, dynamic>)['name'] as String?;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Enum to specify api type when generating code.
+enum ApiType {
+  /// Flutter api.
+  flutter,
+
+  /// Host api.
+  host,
 }
 
 /// Enum to specify which file will be generated for multi-file generators
@@ -553,4 +697,14 @@ class OutputFileOptions<T> {
 
   /// Options for specified language across all file types.
   T languageOptions;
+}
+
+/// Converts strings to Upper Camel Case.
+String toUpperCamelCase(String text) {
+  final RegExp separatorPattern = RegExp(r'[ _-]');
+  return text.split(separatorPattern).map((String word) {
+    return word.isEmpty
+        ? ''
+        : word.substring(0, 1).toUpperCase() + word.substring(1);
+  }).join();
 }

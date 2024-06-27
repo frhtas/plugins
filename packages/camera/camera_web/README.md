@@ -8,7 +8,7 @@ The web implementation of [`camera`][camera].
 
 ### Depend on the package
 
-This package is [endorsed](https://flutter.dev/docs/development/packages-and-plugins/developing-packages#endorsed-federated-plugin),
+This package is [endorsed](https://flutter.dev/to/endorsed-federated-plugin),
 which means you can simply use `camera`
 normally. This package will be automatically included in your app when you do,
 so you do not need to add it to your `pubspec.yaml`.
@@ -80,11 +80,13 @@ URL pointing to a location within the browser (blob) and can be displayed using
 
 See the example below:
 
+<?code-excerpt "example/lib/readme_excerpts.dart (ImageFromXFile)"?>
 ```dart
+final Image image;
 if (kIsWeb) {
-  Image.network(capturedImage.path);
+  image = Image.network(capturedImage.path);
 } else {
-  Image.file(File(capturedImage.path));
+  image = Image.file(File(capturedImage.path));
 }
 ```
 

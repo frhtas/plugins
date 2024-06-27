@@ -19,6 +19,13 @@ const _$BillingResponseEnumMap = {
   BillingResponse.error: 6,
   BillingResponse.itemAlreadyOwned: 7,
   BillingResponse.itemNotOwned: 8,
+  BillingResponse.networkError: 12,
+};
+
+const _$BillingChoiceModeEnumMap = {
+  BillingChoiceMode.playBillingOnly: 0,
+  BillingChoiceMode.alternativeBillingOnly: 1,
+  BillingChoiceMode.userChoiceBilling: 2,
 };
 
 const _$ProductTypeEnumMap = {
@@ -33,6 +40,15 @@ const _$ProrationModeEnumMap = {
   ProrationMode.immediateWithoutProration: 3,
   ProrationMode.deferred: 4,
   ProrationMode.immediateAndChargeFullPrice: 5,
+};
+
+const _$ReplacementModeEnumMap = {
+  ReplacementMode.unknownReplacementMode: 0,
+  ReplacementMode.withTimeProration: 1,
+  ReplacementMode.chargeProratedPrice: 2,
+  ReplacementMode.withoutProration: 3,
+  ReplacementMode.deferred: 6,
+  ReplacementMode.chargeFullPrice: 5,
 };
 
 const _$BillingClientFeatureEnumMap = {

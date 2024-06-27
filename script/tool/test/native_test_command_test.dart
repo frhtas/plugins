@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:ffi';
 
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
@@ -56,10 +57,13 @@ final Map<String, dynamic> _kDeviceListMap = <String, dynamic>{
 };
 
 const String _fakeCmakeCommand = 'path/to/cmake';
+const String _archDirX64 = 'x64';
+const String _archDirArm64 = 'arm64';
 
-void _createFakeCMakeCache(RepositoryPackage plugin, Platform platform) {
+void _createFakeCMakeCache(
+    RepositoryPackage plugin, Platform platform, String? archDir) {
   final CMakeProject project = CMakeProject(getExampleDir(plugin),
-      platform: platform, buildMode: 'Release');
+      platform: platform, buildMode: 'Release', arch: archDir);
   final File cache = project.buildDirectory.childFile('CMakeCache.txt');
   cache.createSync(recursive: true);
   cache.writeAsStringSync('CMAKE_COMMAND:INTERNAL=$_fakeCmakeCommand');
@@ -135,6 +139,7 @@ void main() {
           'xcrun',
           <String>[
             'xcodebuild',
+            'clean',
             'test',
             '-workspace',
             '$platform/Runner.xcworkspace',
@@ -216,7 +221,7 @@ void main() {
         getMockXcodebuildListProcess(<String>['RunnerTests', 'RunnerUITests']),
         // Exit code 66 from testing indicates no tests.
         FakeProcessInfo(
-            MockProcess(exitCode: 66), <String>['xcodebuild', 'test']),
+            MockProcess(exitCode: 66), <String>['xcodebuild', 'clean', 'test']),
       ];
       final List<String> output = await runCapturingPrint(
           runner, <String>['native-test', '--macos', '--no-unit']);
@@ -1060,7 +1065,7 @@ public class FlutterActivityTest {
         ], platformSupport: <String, PlatformDetails>{
           platformLinux: const PlatformDetails(PlatformSupport.inline),
         });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
 
         final File testBinary = childFileWithSubcomponents(plugin.directory,
             <String>['example', ...testBinaryRelativePath.split('/')]);
@@ -1099,7 +1104,7 @@ public class FlutterActivityTest {
         ], platformSupport: <String, PlatformDetails>{
           platformLinux: const PlatformDetails(PlatformSupport.inline),
         });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
 
         final File releaseTestBinary = childFileWithSubcomponents(
             plugin.directory,
@@ -1159,7 +1164,7 @@ public class FlutterActivityTest {
             platformSupport: <String, PlatformDetails>{
               platformLinux: const PlatformDetails(PlatformSupport.inline),
             });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
 
         Error? commandError;
         final List<String> output = await runCapturingPrint(runner, <String>[
@@ -1194,7 +1199,7 @@ public class FlutterActivityTest {
         ], platformSupport: <String, PlatformDetails>{
           platformLinux: const PlatformDetails(PlatformSupport.inline),
         });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
 
         final File testBinary = childFileWithSubcomponents(plugin.directory,
             <String>['example', ...testBinaryRelativePath.split('/')]);
@@ -1465,11 +1470,11 @@ public class FlutterActivityTest {
           getMockXcodebuildListProcess(
               <String>['RunnerTests', 'RunnerUITests']), // iOS list
           FakeProcessInfo(
-              MockProcess(), <String>['xcodebuild', 'test']), // iOS run
+              MockProcess(), <String>['xcodebuild', 'clean', 'test']), // iOS run
           getMockXcodebuildListProcess(
               <String>['RunnerTests', 'RunnerUITests']), // macOS list
           FakeProcessInfo(
-              MockProcess(), <String>['xcodebuild', 'test']), // macOS run
+              MockProcess(), <String>['xcodebuild', 'clean', 'test']), // macOS run
         ];
 
         final List<String> output = await runCapturingPrint(runner, <String>[
@@ -1760,25 +1765,22 @@ public class FlutterActivityTest {
       mockPlatform = MockPlatform(isWindows: true);
       packagesDir = createPackagesDirectory(fileSystem: fileSystem);
       processRunner = RecordingProcessRunner();
-      final NativeTestCommand command = NativeTestCommand(packagesDir,
-          processRunner: processRunner, platform: mockPlatform);
-
-      runner = CommandRunner<void>(
-          'native_test_command', 'Test for native_test_command');
-      runner.addCommand(command);
     });
 
     // Returns the ProcessCall to expect for build the Windows unit tests for
     // the given plugin.
-    ProcessCall getWindowsBuildCall(RepositoryPackage plugin) {
+    ProcessCall getWindowsBuildCall(RepositoryPackage plugin, String? arch) {
+      Directory projectDir = getExampleDir(plugin)
+          .childDirectory('build')
+          .childDirectory('windows');
+      if (arch != null) {
+        projectDir = projectDir.childDirectory(arch);
+      }
       return ProcessCall(
           _fakeCmakeCommand,
           <String>[
             '--build',
-            getExampleDir(plugin)
-                .childDirectory('build')
-                .childDirectory('windows')
-                .path,
+            projectDir.path,
             '--target',
             'unit_tests',
             '--config',
@@ -1787,8 +1789,58 @@ public class FlutterActivityTest {
           null);
     }
 
-    group('Windows', () {
+    group('Windows x64', () {
+      setUp(() {
+        final NativeTestCommand command = NativeTestCommand(packagesDir,
+            processRunner: processRunner,
+            platform: mockPlatform,
+            abi: Abi.windowsX64);
+
+        runner = CommandRunner<void>(
+            'native_test_command', 'Test for native_test_command');
+        runner.addCommand(command);
+      });
+
       test('runs unit tests', () async {
+        const String x64TestBinaryRelativePath =
+            'build/windows/x64/Debug/bar/plugin_test.exe';
+        const String arm64TestBinaryRelativePath =
+            'build/windows/arm64/Debug/bar/plugin_test.exe';
+        final RepositoryPackage plugin =
+            createFakePlugin('plugin', packagesDir, extraFiles: <String>[
+          'example/$x64TestBinaryRelativePath',
+          'example/$arm64TestBinaryRelativePath',
+        ], platformSupport: <String, PlatformDetails>{
+          platformWindows: const PlatformDetails(PlatformSupport.inline),
+        });
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
+
+        final File testBinary = childFileWithSubcomponents(plugin.directory,
+            <String>['example', ...x64TestBinaryRelativePath.split('/')]);
+
+        final List<String> output = await runCapturingPrint(runner, <String>[
+          'native-test',
+          '--windows',
+          '--no-integration',
+        ]);
+
+        expect(
+          output,
+          containsAllInOrder(<Matcher>[
+            contains('Running plugin_test.exe...'),
+            contains('No issues found!'),
+          ]),
+        );
+
+        expect(
+            processRunner.recordedCalls,
+            orderedEquals(<ProcessCall>[
+              getWindowsBuildCall(plugin, _archDirX64),
+              ProcessCall(testBinary.path, const <String>[], null),
+            ]));
+      });
+
+      test('runs unit tests with legacy build output', () async {
         const String testBinaryRelativePath =
             'build/windows/Debug/bar/plugin_test.exe';
         final RepositoryPackage plugin =
@@ -1797,7 +1849,7 @@ public class FlutterActivityTest {
         ], platformSupport: <String, PlatformDetails>{
           platformWindows: const PlatformDetails(PlatformSupport.inline),
         });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, null);
 
         final File testBinary = childFileWithSubcomponents(plugin.directory,
             <String>['example', ...testBinaryRelativePath.split('/')]);
@@ -1819,16 +1871,16 @@ public class FlutterActivityTest {
         expect(
             processRunner.recordedCalls,
             orderedEquals(<ProcessCall>[
-              getWindowsBuildCall(plugin),
+              getWindowsBuildCall(plugin, null),
               ProcessCall(testBinary.path, const <String>[], null),
             ]));
       });
 
       test('only runs debug unit tests', () async {
         const String debugTestBinaryRelativePath =
-            'build/windows/Debug/bar/plugin_test.exe';
+            'build/windows/x64/Debug/bar/plugin_test.exe';
         const String releaseTestBinaryRelativePath =
-            'build/windows/Release/bar/plugin_test.exe';
+            'build/windows/x64/Release/bar/plugin_test.exe';
         final RepositoryPackage plugin =
             createFakePlugin('plugin', packagesDir, extraFiles: <String>[
           'example/$debugTestBinaryRelativePath',
@@ -1836,7 +1888,7 @@ public class FlutterActivityTest {
         ], platformSupport: <String, PlatformDetails>{
           platformWindows: const PlatformDetails(PlatformSupport.inline),
         });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
 
         final File debugTestBinary = childFileWithSubcomponents(
             plugin.directory,
@@ -1859,7 +1911,47 @@ public class FlutterActivityTest {
         expect(
             processRunner.recordedCalls,
             orderedEquals(<ProcessCall>[
-              getWindowsBuildCall(plugin),
+              getWindowsBuildCall(plugin, _archDirX64),
+              ProcessCall(debugTestBinary.path, const <String>[], null),
+            ]));
+      });
+
+      test('only runs debug unit tests with legacy build output', () async {
+        const String debugTestBinaryRelativePath =
+            'build/windows/Debug/bar/plugin_test.exe';
+        const String releaseTestBinaryRelativePath =
+            'build/windows/Release/bar/plugin_test.exe';
+        final RepositoryPackage plugin =
+            createFakePlugin('plugin', packagesDir, extraFiles: <String>[
+          'example/$debugTestBinaryRelativePath',
+          'example/$releaseTestBinaryRelativePath'
+        ], platformSupport: <String, PlatformDetails>{
+          platformWindows: const PlatformDetails(PlatformSupport.inline),
+        });
+        _createFakeCMakeCache(plugin, mockPlatform, null);
+
+        final File debugTestBinary = childFileWithSubcomponents(
+            plugin.directory,
+            <String>['example', ...debugTestBinaryRelativePath.split('/')]);
+
+        final List<String> output = await runCapturingPrint(runner, <String>[
+          'native-test',
+          '--windows',
+          '--no-integration',
+        ]);
+
+        expect(
+          output,
+          containsAllInOrder(<Matcher>[
+            contains('Running plugin_test.exe...'),
+            contains('No issues found!'),
+          ]),
+        );
+
+        expect(
+            processRunner.recordedCalls,
+            orderedEquals(<ProcessCall>[
+              getWindowsBuildCall(plugin, null),
               ProcessCall(debugTestBinary.path, const <String>[], null),
             ]));
       });
@@ -1896,7 +1988,7 @@ public class FlutterActivityTest {
             platformSupport: <String, PlatformDetails>{
               platformWindows: const PlatformDetails(PlatformSupport.inline),
             });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
 
         Error? commandError;
         final List<String> output = await runCapturingPrint(runner, <String>[
@@ -1918,20 +2010,20 @@ public class FlutterActivityTest {
         expect(
             processRunner.recordedCalls,
             orderedEquals(<ProcessCall>[
-              getWindowsBuildCall(plugin),
+              getWindowsBuildCall(plugin, _archDirX64),
             ]));
       });
 
       test('fails if a unit test fails', () async {
         const String testBinaryRelativePath =
-            'build/windows/Debug/bar/plugin_test.exe';
+            'build/windows/x64/Debug/bar/plugin_test.exe';
         final RepositoryPackage plugin =
             createFakePlugin('plugin', packagesDir, extraFiles: <String>[
           'example/$testBinaryRelativePath'
         ], platformSupport: <String, PlatformDetails>{
           platformWindows: const PlatformDetails(PlatformSupport.inline),
         });
-        _createFakeCMakeCache(plugin, mockPlatform);
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
 
         final File testBinary = childFileWithSubcomponents(plugin.directory,
             <String>['example', ...testBinaryRelativePath.split('/')]);
@@ -1961,8 +2053,136 @@ public class FlutterActivityTest {
         expect(
             processRunner.recordedCalls,
             orderedEquals(<ProcessCall>[
-              getWindowsBuildCall(plugin),
+              getWindowsBuildCall(plugin, _archDirX64),
               ProcessCall(testBinary.path, const <String>[], null),
+            ]));
+      });
+    });
+
+    group('Windows arm64', () {
+      setUp(() {
+        final NativeTestCommand command = NativeTestCommand(packagesDir,
+            processRunner: processRunner,
+            platform: mockPlatform,
+            abi: Abi.windowsArm64);
+
+        runner = CommandRunner<void>(
+            'native_test_command', 'Test for native_test_command');
+        runner.addCommand(command);
+      });
+
+      test('runs unit tests', () async {
+        const String x64TestBinaryRelativePath =
+            'build/windows/x64/Debug/bar/plugin_test.exe';
+        const String arm64TestBinaryRelativePath =
+            'build/windows/arm64/Debug/bar/plugin_test.exe';
+        final RepositoryPackage plugin =
+            createFakePlugin('plugin', packagesDir, extraFiles: <String>[
+          'example/$x64TestBinaryRelativePath',
+          'example/$arm64TestBinaryRelativePath',
+        ], platformSupport: <String, PlatformDetails>{
+          platformWindows: const PlatformDetails(PlatformSupport.inline),
+        });
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirArm64);
+
+        final File testBinary = childFileWithSubcomponents(plugin.directory,
+            <String>['example', ...arm64TestBinaryRelativePath.split('/')]);
+
+        final List<String> output = await runCapturingPrint(runner, <String>[
+          'native-test',
+          '--windows',
+          '--no-integration',
+        ]);
+
+        expect(
+          output,
+          containsAllInOrder(<Matcher>[
+            contains('Running plugin_test.exe...'),
+            contains('No issues found!'),
+          ]),
+        );
+
+        expect(
+            processRunner.recordedCalls,
+            orderedEquals(<ProcessCall>[
+              getWindowsBuildCall(plugin, _archDirArm64),
+              ProcessCall(testBinary.path, const <String>[], null),
+            ]));
+      });
+
+      test('falls back to x64 unit tests if arm64 is not built', () async {
+        const String x64TestBinaryRelativePath =
+            'build/windows/x64/Debug/bar/plugin_test.exe';
+        final RepositoryPackage plugin =
+            createFakePlugin('plugin', packagesDir, extraFiles: <String>[
+          'example/$x64TestBinaryRelativePath',
+        ], platformSupport: <String, PlatformDetails>{
+          platformWindows: const PlatformDetails(PlatformSupport.inline),
+        });
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirX64);
+
+        final File testBinary = childFileWithSubcomponents(plugin.directory,
+            <String>['example', ...x64TestBinaryRelativePath.split('/')]);
+
+        final List<String> output = await runCapturingPrint(runner, <String>[
+          'native-test',
+          '--windows',
+          '--no-integration',
+        ]);
+
+        expect(
+          output,
+          containsAllInOrder(<Matcher>[
+            contains('Running plugin_test.exe...'),
+            contains('No issues found!'),
+          ]),
+        );
+
+        expect(
+            processRunner.recordedCalls,
+            orderedEquals(<ProcessCall>[
+              getWindowsBuildCall(plugin, _archDirX64),
+              ProcessCall(testBinary.path, const <String>[], null),
+            ]));
+      });
+
+      test('only runs debug unit tests', () async {
+        const String debugTestBinaryRelativePath =
+            'build/windows/arm64/Debug/bar/plugin_test.exe';
+        const String releaseTestBinaryRelativePath =
+            'build/windows/arm64/Release/bar/plugin_test.exe';
+        final RepositoryPackage plugin =
+            createFakePlugin('plugin', packagesDir, extraFiles: <String>[
+          'example/$debugTestBinaryRelativePath',
+          'example/$releaseTestBinaryRelativePath'
+        ], platformSupport: <String, PlatformDetails>{
+          platformWindows: const PlatformDetails(PlatformSupport.inline),
+        });
+        _createFakeCMakeCache(plugin, mockPlatform, _archDirArm64);
+
+        final File debugTestBinary = childFileWithSubcomponents(
+            plugin.directory,
+            <String>['example', ...debugTestBinaryRelativePath.split('/')]);
+
+        final List<String> output = await runCapturingPrint(runner, <String>[
+          'native-test',
+          '--windows',
+          '--no-integration',
+        ]);
+
+        expect(
+          output,
+          containsAllInOrder(<Matcher>[
+            contains('Running plugin_test.exe...'),
+            contains('No issues found!'),
+          ]),
+        );
+
+        expect(
+            processRunner.recordedCalls,
+            orderedEquals(<ProcessCall>[
+              getWindowsBuildCall(plugin, _archDirArm64),
+              ProcessCall(debugTestBinary.path, const <String>[], null),
             ]));
       });
     });

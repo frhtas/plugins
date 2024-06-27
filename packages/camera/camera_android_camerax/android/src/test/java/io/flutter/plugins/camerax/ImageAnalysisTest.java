@@ -12,18 +12,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.content.Context;
-import android.util.Size;
+import android.view.Surface;
 import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.resolutionselector.ResolutionSelector;
 import androidx.test.core.app.ApplicationProvider;
 import io.flutter.plugin.common.BinaryMessenger;
-import io.flutter.plugins.camerax.GeneratedCameraXLibrary.ResolutionInfo;
 import java.util.concurrent.Executor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -52,38 +51,31 @@ public class ImageAnalysisTest {
   @Test
   public void hostApiCreate_createsExpectedImageAnalysisInstanceWithExpectedIdentifier() {
     final ImageAnalysisHostApiImpl hostApi =
-        new ImageAnalysisHostApiImpl(mockBinaryMessenger, instanceManager);
+        new ImageAnalysisHostApiImpl(mockBinaryMessenger, instanceManager, context);
     final CameraXProxy mockCameraXProxy = mock(CameraXProxy.class);
     final ImageAnalysis.Builder mockImageAnalysisBuilder = mock(ImageAnalysis.Builder.class);
-    final int targetResolutionWidth = 10;
-    final int targetResolutionHeight = 50;
-    final ResolutionInfo resolutionInfo =
-        new ResolutionInfo.Builder()
-            .setWidth(Long.valueOf(targetResolutionWidth))
-            .setHeight(Long.valueOf(targetResolutionHeight))
-            .build();
+    final ResolutionSelector mockResolutionSelector = mock(ResolutionSelector.class);
     final long instanceIdentifier = 0;
+    final long mockResolutionSelectorId = 25;
+    final int targetRotation = Surface.ROTATION_90;
 
     hostApi.cameraXProxy = mockCameraXProxy;
-
-    final ArgumentCaptor<Size> sizeCaptor = ArgumentCaptor.forClass(Size.class);
+    instanceManager.addDartCreatedInstance(mockResolutionSelector, mockResolutionSelectorId);
 
     when(mockCameraXProxy.createImageAnalysisBuilder()).thenReturn(mockImageAnalysisBuilder);
     when(mockImageAnalysisBuilder.build()).thenReturn(mockImageAnalysis);
 
-    hostApi.create(instanceIdentifier, resolutionInfo);
+    hostApi.create(instanceIdentifier, Long.valueOf(targetRotation), mockResolutionSelectorId);
 
-    verify(mockImageAnalysisBuilder).setTargetResolution(sizeCaptor.capture());
-    assertEquals(sizeCaptor.getValue().getWidth(), targetResolutionWidth);
-    assertEquals(sizeCaptor.getValue().getHeight(), targetResolutionHeight);
+    verify(mockImageAnalysisBuilder).setTargetRotation(targetRotation);
+    verify(mockImageAnalysisBuilder).setResolutionSelector(mockResolutionSelector);
     assertEquals(instanceManager.getInstance(instanceIdentifier), mockImageAnalysis);
   }
 
   @Test
   public void setAnalyzer_makesCallToSetAnalyzerOnExpectedImageAnalysisInstance() {
     final ImageAnalysisHostApiImpl hostApi =
-        new ImageAnalysisHostApiImpl(mockBinaryMessenger, instanceManager);
-    hostApi.setContext(context);
+        new ImageAnalysisHostApiImpl(mockBinaryMessenger, instanceManager, context);
 
     final ImageAnalysis.Analyzer mockAnalyzer = mock(ImageAnalysis.Analyzer.class);
     final long analyzerIdentifier = 10;
@@ -100,7 +92,7 @@ public class ImageAnalysisTest {
   @Test
   public void clearAnalyzer_makesCallToClearAnalyzerOnExpectedImageAnalysisInstance() {
     final ImageAnalysisHostApiImpl hostApi =
-        new ImageAnalysisHostApiImpl(mockBinaryMessenger, instanceManager);
+        new ImageAnalysisHostApiImpl(mockBinaryMessenger, instanceManager, context);
     final long instanceIdentifier = 22;
 
     instanceManager.addDartCreatedInstance(mockImageAnalysis, instanceIdentifier);
@@ -108,5 +100,19 @@ public class ImageAnalysisTest {
     hostApi.clearAnalyzer(instanceIdentifier);
 
     verify(mockImageAnalysis).clearAnalyzer();
+  }
+
+  @Test
+  public void setTargetRotation_makesCallToSetTargetRotation() {
+    final ImageAnalysisHostApiImpl hostApi =
+        new ImageAnalysisHostApiImpl(mockBinaryMessenger, instanceManager, context);
+    final long instanceIdentifier = 32;
+    final int targetRotation = Surface.ROTATION_180;
+
+    instanceManager.addDartCreatedInstance(mockImageAnalysis, instanceIdentifier);
+
+    hostApi.setTargetRotation(instanceIdentifier, Long.valueOf(targetRotation));
+
+    verify(mockImageAnalysis).setTargetRotation(targetRotation);
   }
 }

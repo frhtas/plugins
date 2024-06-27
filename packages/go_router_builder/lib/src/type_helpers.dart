@@ -16,7 +16,7 @@ const String convertMapValueHelperName = r'_$convertMapValue';
 
 /// The name of the generated, private helper for converting [Duration] to
 /// [bool].
-const String durationDecoderHelperName = r'_$duractionConverter';
+const String durationDecoderHelperName = r'_$durationConverter';
 
 /// The name of the generated, private helper for converting [String] to [Enum].
 const String enumExtensionHelperName = r'_$fromName';
@@ -87,21 +87,19 @@ String encodeField(PropertyAccessorElement element) {
 }
 
 /// Gets the name of the `const` map generated to help encode [Enum] types.
-// TODO(stuartmorgan): Remove this ignore once 'analyze' can be set to
-// 5.2+ (when Flutter 3.4+ is on stable).
-// ignore: deprecated_member_use
 String enumMapName(InterfaceType type) => '_\$${type.element.name}EnumMap';
 
 String _stateValueAccess(ParameterElement element, Set<String> pathParameters) {
   if (element.isExtraField) {
-    return 'extra as ${element.type.getDisplayString(withNullability: element.isOptional)}';
+    // ignore: avoid_redundant_argument_values
+    return 'extra as ${element.type.getDisplayString(withNullability: true)}';
   }
 
   late String access;
   if (pathParameters.contains(element.name)) {
     access = 'pathParameters[${escapeDartString(element.name)}]';
   } else {
-    access = 'queryParameters[${escapeDartString(element.name.kebab)}]';
+    access = 'uri.queryParameters[${escapeDartString(element.name.kebab)}]';
   }
   if (pathParameters.contains(element.name) ||
       (!element.type.isNullableType && !element.hasDefaultValue)) {
@@ -284,12 +282,12 @@ class _TypeHelperIterable extends _TypeHelper {
       }
 
       return '''
-state.queryParametersAll[
+state.uri.queryParametersAll[
         ${escapeDartString(parameterElement.name.kebab)}]
         ?.map($entriesTypeDecoder)$iterableCaster''';
     }
     return '''
-state.queryParametersAll[${escapeDartString(parameterElement.name.kebab)}]''';
+state.uri.queryParametersAll[${escapeDartString(parameterElement.name.kebab)}]''';
   }
 
   @override
@@ -334,7 +332,7 @@ abstract class _TypeHelperWithHelper extends _TypeHelper {
         (paramType.isNullableType || parameterElement.hasDefaultValue)) {
       return '$convertMapValueHelperName('
           '${escapeDartString(parameterName.kebab)}, '
-          'state.queryParameters, '
+          'state.uri.queryParameters, '
           '${helperName(paramType)})';
     }
     return '${helperName(paramType)}'

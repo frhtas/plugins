@@ -9,69 +9,72 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import junit.framework.TestCase
-import org.junit.Test
 import java.nio.ByteBuffer
 import java.util.ArrayList
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
-internal class EnumTest: TestCase() {
-    @Test
-    fun testEchoHost() {
-        val binaryMessenger = mockk<BinaryMessenger>()
-        val api = mockk<EnumApi2Host>()
+internal class EnumTest {
 
-        val channelName = "dev.flutter.pigeon.EnumApi2Host.echo"
-        val input = DataWithEnum(EnumState.SUCCESS)
+  @Test
+  fun testEchoHost() {
+    val binaryMessenger = mockk<BinaryMessenger>()
+    val api = mockk<EnumApi2Host>()
 
-        val handlerSlot = slot<BinaryMessenger.BinaryMessageHandler>()
+    val channelName = "dev.flutter.pigeon.pigeon_integration_tests.EnumApi2Host.echo"
+    val input = DataWithEnum(EnumState.SNAKE_CASE)
 
-        every { binaryMessenger.setMessageHandler(channelName, capture(handlerSlot)) } returns Unit
-        every { api.echo(any()) } returnsArgument 0
+    val handlerSlot = slot<BinaryMessenger.BinaryMessageHandler>()
 
-        EnumApi2Host.setUp(binaryMessenger, api)
+    every { binaryMessenger.setMessageHandler(channelName, capture(handlerSlot)) } returns Unit
+    every { api.echo(any()) } returnsArgument 0
 
-        val codec = EnumApi2Host.codec
-        val message = codec.encodeMessage(listOf(input))
-        message?.rewind()
-        handlerSlot.captured.onMessage(message) {
-            it?.rewind()
-            @Suppress("UNCHECKED_CAST")
-            val wrapped = codec.decodeMessage(it) as List<Any>?
-            assertNotNull(wrapped)
-            wrapped?.let {
-                assertNotNull(wrapped[0])
-                assertEquals(input, wrapped[0])
-            }
-        }
+    EnumApi2Host.setUp(binaryMessenger, api)
 
-        verify { binaryMessenger.setMessageHandler(channelName, handlerSlot.captured) }
-        verify { api.echo(input) }
+    val codec = EnumApi2Host.codec
+    val message = codec.encodeMessage(listOf(input))
+    message?.rewind()
+    handlerSlot.captured.onMessage(message) {
+      it?.rewind()
+      @Suppress("UNCHECKED_CAST") val wrapped = codec.decodeMessage(it) as List<Any>?
+      assertNotNull(wrapped)
+      wrapped?.let {
+        assertNotNull(wrapped[0])
+        assertEquals(input, wrapped[0])
+      }
     }
 
-    @Test
-    fun testEchoFlutter() {
-        val binaryMessenger = mockk<BinaryMessenger>()
-        val api = EnumApi2Flutter(binaryMessenger)
+    verify { binaryMessenger.setMessageHandler(channelName, handlerSlot.captured) }
+    verify { api.echo(input) }
+  }
 
-        val input = DataWithEnum(EnumState.SUCCESS)
+  @Test
+  fun testEchoFlutter() {
+    val binaryMessenger = mockk<BinaryMessenger>()
+    val api = EnumApi2Flutter(binaryMessenger)
 
-        every { binaryMessenger.send(any(), any(), any()) } answers {
-            val codec = EnumApi2Flutter.codec
-            val message = arg<ByteBuffer>(1)
-            val reply = arg<BinaryMessenger.BinaryReply>(2)
-            message.position(0)
-            val args = codec.decodeMessage(message) as ArrayList<*>
-            val replyData = codec.encodeMessage(args[0])
-            replyData?.position(0)
-            reply.reply(replyData)
+    val input = DataWithEnum(EnumState.SNAKE_CASE)
+
+    every { binaryMessenger.send(any(), any(), any()) } answers
+        {
+          val codec = EnumApi2Flutter.codec
+          val message = arg<ByteBuffer>(1)
+          val reply = arg<BinaryMessenger.BinaryReply>(2)
+          message.position(0)
+          val args = codec.decodeMessage(message) as ArrayList<*>
+          val replyData = codec.encodeMessage(args)
+          replyData?.position(0)
+          reply.reply(replyData)
         }
 
-        var didCall = false
-        api.echo(input) {
-            didCall = true
-            assertEquals(input, it)
-        }
-
-        assertTrue(didCall)
+    var didCall = false
+    api.echo(input) {
+      didCall = true
+      assertEquals(input, it.getOrNull())
     }
+
+    assertTrue(didCall)
+  }
 }

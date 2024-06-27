@@ -27,10 +27,12 @@ void main() {
     late final BillingClient billingClient;
 
     setUpAll(() {
-      billingClient = BillingClient((PurchasesResultWrapper _) {});
+      billingClient = BillingClient(
+          (PurchasesResultWrapper _) {}, (UserChoiceDetailsWrapper _) {});
     });
 
-    test('BillingClient.acknowledgePurchase', () async {
+    testWidgets('BillingClient.acknowledgePurchase',
+        (WidgetTester tester) async {
       try {
         await billingClient.acknowledgePurchase('purchaseToken');
       } on MissingPluginException {
@@ -38,7 +40,7 @@ void main() {
       }
     });
 
-    test('BillingClient.consumeAsync', () async {
+    testWidgets('BillingClient.consumeAsync', (WidgetTester tester) async {
       try {
         await billingClient.consumeAsync('purchaseToken');
       } on MissingPluginException {
@@ -46,7 +48,7 @@ void main() {
       }
     });
 
-    test('BillingClient.endConnection', () async {
+    testWidgets('BillingClient.endConnection', (WidgetTester tester) async {
       try {
         await billingClient.endConnection();
       } on MissingPluginException {
@@ -54,7 +56,8 @@ void main() {
       }
     });
 
-    test('BillingClient.isFeatureSupported', () async {
+    testWidgets('BillingClient.isFeatureSupported',
+        (WidgetTester tester) async {
       try {
         await billingClient
             .isFeatureSupported(BillingClientFeature.productDetails);
@@ -63,7 +66,7 @@ void main() {
       }
     });
 
-    test('BillingClient.isReady', () async {
+    testWidgets('BillingClient.isReady', (WidgetTester tester) async {
       try {
         await billingClient.isReady();
       } on MissingPluginException {
@@ -71,7 +74,7 @@ void main() {
       }
     });
 
-    test('BillingClient.launchBillingFlow', () async {
+    testWidgets('BillingClient.launchBillingFlow', (WidgetTester tester) async {
       try {
         await billingClient.launchBillingFlow(product: 'product');
       } on MissingPluginException {
@@ -84,7 +87,8 @@ void main() {
       }
     });
 
-    test('BillingClient.queryProductDetails', () async {
+    testWidgets('BillingClient.queryProductDetails',
+        (WidgetTester tester) async {
       try {
         await billingClient
             .queryProductDetails(productList: <ProductWrapper>[]);
@@ -99,7 +103,8 @@ void main() {
       }
     });
 
-    test('BillingClient.queryPurchaseHistory', () async {
+    testWidgets('BillingClient.queryPurchaseHistory',
+        (WidgetTester tester) async {
       try {
         await billingClient.queryPurchaseHistory(ProductType.inapp);
       } on MissingPluginException {
@@ -107,7 +112,7 @@ void main() {
       }
     });
 
-    test('BillingClient.queryPurchases', () async {
+    testWidgets('BillingClient.queryPurchases', (WidgetTester tester) async {
       try {
         await billingClient.queryPurchases(ProductType.inapp);
       } on MissingPluginException {
@@ -115,7 +120,7 @@ void main() {
       }
     });
 
-    test('BillingClient.startConnection', () async {
+    testWidgets('BillingClient.startConnection', (WidgetTester tester) async {
       try {
         await billingClient.startConnection(
             onBillingServiceDisconnected: () {});

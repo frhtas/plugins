@@ -69,32 +69,28 @@ void main() {
         expectedSize, Size(image.height.toDouble(), image.width.toDouble()));
   }
 
-  testWidgets(
-    'Capture specific image resolutions',
-    (WidgetTester tester) async {
-      final List<CameraDescription> cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        return;
+  testWidgets('Capture specific image resolutions',
+      (WidgetTester tester) async {
+    final List<CameraDescription> cameras = await availableCameras();
+    if (cameras.isEmpty) {
+      return;
+    }
+    for (final CameraDescription cameraDescription in cameras) {
+      bool previousPresetExactlySupported = true;
+      for (final MapEntry<ResolutionPreset, Size> preset
+          in presetExpectedSizes.entries) {
+        final CameraController controller =
+            CameraController(cameraDescription, preset.key);
+        await controller.initialize();
+        final bool presetExactlySupported =
+            await testCaptureImageResolution(controller, preset.key);
+        assert(!(!previousPresetExactlySupported && presetExactlySupported),
+            'The camera took higher resolution pictures at a lower resolution.');
+        previousPresetExactlySupported = presetExactlySupported;
+        await controller.dispose();
       }
-      for (final CameraDescription cameraDescription in cameras) {
-        bool previousPresetExactlySupported = true;
-        for (final MapEntry<ResolutionPreset, Size> preset
-            in presetExpectedSizes.entries) {
-          final CameraController controller =
-              CameraController(cameraDescription, preset.key);
-          await controller.initialize();
-          final bool presetExactlySupported =
-              await testCaptureImageResolution(controller, preset.key);
-          assert(!(!previousPresetExactlySupported && presetExactlySupported),
-              'The camera took higher resolution pictures at a lower resolution.');
-          previousPresetExactlySupported = presetExactlySupported;
-          await controller.dispose();
-        }
-      }
-    },
-    // TODO(egarciad): Fix https://github.com/flutter/flutter/issues/93686.
-    skip: true,
-  );
+    }
+  });
 
   // This tests that the capture is no bigger than the preset, since we have
   // automatic code to fall back to smaller sizes when we need to. Returns
@@ -149,6 +145,40 @@ void main() {
     skip: true,
   );
 
+  testWidgets('Video capture records valid video', (WidgetTester tester) async {
+    final List<CameraDescription> cameras = await availableCameras();
+    if (cameras.isEmpty) {
+      return;
+    }
+
+    final CameraController controller = CameraController(
+      cameras[0],
+      ResolutionPreset.low,
+      enableAudio: false,
+    );
+    await controller.initialize();
+    await controller.prepareForVideoRecording();
+
+    await controller.startVideoRecording();
+    final int recordingStart = DateTime.now().millisecondsSinceEpoch;
+
+    sleep(const Duration(seconds: 2));
+
+    final XFile file = await controller.stopVideoRecording();
+    final int recordingTime =
+        DateTime.now().millisecondsSinceEpoch - recordingStart;
+
+    final File videoFile = File(file.path);
+    final VideoPlayerController videoController = VideoPlayerController.file(
+      videoFile,
+    );
+    await videoController.initialize();
+    final int duration = videoController.value.duration.inMilliseconds;
+    await videoController.dispose();
+
+    expect(duration, lessThan(recordingTime));
+  });
+
   testWidgets('Pause and resume video recording', (WidgetTester tester) async {
     final List<CameraDescription> cameras = await availableCameras();
     if (cameras.isEmpty) {
@@ -166,26 +196,21 @@ void main() {
 
     int startPause;
     int timePaused = 0;
+    const int pauseIterations = 2;
 
     await controller.startVideoRecording();
     final int recordingStart = DateTime.now().millisecondsSinceEpoch;
     sleep(const Duration(milliseconds: 500));
 
-    await controller.pauseVideoRecording();
-    startPause = DateTime.now().millisecondsSinceEpoch;
-    sleep(const Duration(milliseconds: 500));
-    await controller.resumeVideoRecording();
-    timePaused += DateTime.now().millisecondsSinceEpoch - startPause;
+    for (int i = 0; i < pauseIterations; i++) {
+      await controller.pauseVideoRecording();
+      startPause = DateTime.now().millisecondsSinceEpoch;
+      sleep(const Duration(milliseconds: 500));
+      await controller.resumeVideoRecording();
+      timePaused += DateTime.now().millisecondsSinceEpoch - startPause;
 
-    sleep(const Duration(milliseconds: 500));
-
-    await controller.pauseVideoRecording();
-    startPause = DateTime.now().millisecondsSinceEpoch;
-    sleep(const Duration(milliseconds: 500));
-    await controller.resumeVideoRecording();
-    timePaused += DateTime.now().millisecondsSinceEpoch - startPause;
-
-    sleep(const Duration(milliseconds: 500));
+      sleep(const Duration(milliseconds: 500));
+    }
 
     final XFile file = await controller.stopVideoRecording();
     final int recordingTime =

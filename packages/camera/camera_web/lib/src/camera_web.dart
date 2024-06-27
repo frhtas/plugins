@@ -96,15 +96,11 @@ class CameraPlugin extends CameraPlatform {
         );
       }
 
-      // Request video and audio permissions.
+      // Request video permissions only.
       final html.MediaStream cameraStream =
-          await _cameraService.getMediaStreamForOptions(
-        const CameraOptions(
-          audio: AudioConstraints(enabled: true),
-        ),
-      );
+          await _cameraService.getMediaStreamForOptions(const CameraOptions());
 
-      // Release the camera stream used to request video and audio permissions.
+      // Release the camera stream used to request video permissions.
       cameraStream
           .getVideoTracks()
           .forEach((html.MediaStreamTrack videoTrack) => videoTrack.stop());
@@ -201,7 +197,19 @@ class CameraPlugin extends CameraPlatform {
     CameraDescription cameraDescription,
     ResolutionPreset? resolutionPreset, {
     bool enableAudio = false,
-  }) async {
+  }) =>
+      createCameraWithSettings(
+          cameraDescription,
+          MediaSettings(
+            resolutionPreset: resolutionPreset,
+            enableAudio: enableAudio,
+          ));
+
+  @override
+  Future<int> createCameraWithSettings(
+    CameraDescription cameraDescription,
+    MediaSettings? mediaSettings,
+  ) async {
     try {
       if (!camerasMetadata.containsKey(cameraDescription)) {
         throw PlatformException(
@@ -221,8 +229,8 @@ class CameraPlugin extends CameraPlatform {
 
       // Use the highest resolution possible
       // if the resolution preset is not specified.
-      final Size videoSize = _cameraService
-          .mapResolutionPresetToSize(resolutionPreset ?? ResolutionPreset.max);
+      final Size videoSize = _cameraService.mapResolutionPresetToSize(
+          mediaSettings?.resolutionPreset ?? ResolutionPreset.max);
 
       // Create a camera with the given audio and video constraints.
       // Sensor orientation is currently not supported.
@@ -230,7 +238,7 @@ class CameraPlugin extends CameraPlatform {
         textureId: textureId,
         cameraService: _cameraService,
         options: CameraOptions(
-          audio: AudioConstraints(enabled: enableAudio),
+          audio: AudioConstraints(enabled: mediaSettings?.enableAudio ?? true),
           video: VideoConstraints(
             facingMode:
                 cameraType != null ? FacingModeConstraint(cameraType) : null,
@@ -242,6 +250,10 @@ class CameraPlugin extends CameraPlatform {
             ),
             deviceId: cameraMetadata.deviceId,
           ),
+        ),
+        recorderOptions: (
+          audioBitrate: mediaSettings?.audioBitrate,
+          videoBitrate: mediaSettings?.videoBitrate,
         ),
       );
 

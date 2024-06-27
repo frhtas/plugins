@@ -33,9 +33,32 @@ const String platformWindows = 'windows';
 /// Key for enable experiment.
 const String kEnableExperiment = 'enable-experiment';
 
+/// A String to add to comments on temporarily-added changes that should not
+/// land (e.g., dependency overrides in federated plugin combination PRs).
+const String kDoNotLandWarning = 'DO NOT MERGE';
+
 /// Target platforms supported by Flutter.
 // ignore: public_member_api_docs
 enum FlutterPlatform { android, ios, linux, macos, web, windows }
+
+const Map<String, FlutterPlatform> _platformByName = <String, FlutterPlatform>{
+  platformAndroid: FlutterPlatform.android,
+  platformIOS: FlutterPlatform.ios,
+  platformLinux: FlutterPlatform.linux,
+  platformMacOS: FlutterPlatform.macos,
+  platformWeb: FlutterPlatform.web,
+  platformWindows: FlutterPlatform.windows,
+};
+
+/// Maps from a platform name (e.g., flag or platform directory) to the
+/// corresponding platform enum.
+FlutterPlatform getPlatformByName(String name) {
+  final FlutterPlatform? platform = _platformByName[name];
+  if (platform == null) {
+    throw ArgumentError('Invalid platform: $name');
+  }
+  return platform;
+}
 
 // Flutter->Dart SDK version mapping. Any time a command fails to look up a
 // corresponding version, this map should be updated.
@@ -47,6 +70,15 @@ final Map<Version, Version> _dartSdkForFlutterSdk = <Version, Version>{
   Version(3, 7, 0): Version(2, 19, 0),
   Version(3, 7, 12): Version(2, 19, 6),
   Version(3, 10, 0): Version(3, 0, 0),
+  Version(3, 10, 6): Version(3, 0, 6),
+  Version(3, 13, 0): Version(3, 1, 0),
+  Version(3, 13, 9): Version(3, 1, 5),
+  Version(3, 16, 0): Version(3, 2, 0),
+  Version(3, 16, 6): Version(3, 2, 3),
+  Version(3, 16, 9): Version(3, 2, 6),
+  Version(3, 19, 0): Version(3, 3, 0),
+  Version(3, 19, 6): Version(3, 3, 4),
+  Version(3, 22, 0): Version(3, 4, 0),
 };
 
 /// Returns the version of the Dart SDK that shipped with the given Flutter
@@ -60,7 +92,7 @@ bool isPackage(FileSystemEntity entity) {
     return false;
   }
   // According to
-  // https://dart.dev/guides/libraries/create-library-packages#what-makes-a-library-package
+  // https://dart.dev/guides/libraries/create-packages#what-makes-a-library-package
   // a package must also have a `lib/` directory, but in practice that's not
   // always true. Some special cases (espresso, flutter_template_images, etc.)
   // don't have any source, so this deliberately doesn't check that there's a

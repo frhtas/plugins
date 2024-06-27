@@ -1,3 +1,60 @@
+## 6.3.3
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 6.3.2
+
+* Bumps androidx.annotation:annotation from 1.7.1 to 1.8.0.
+
+## 6.3.1
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 6.3.0
+
+* Adds support for `BrowserConfiguration`.
+* Implements `showTitle` functionality for Android Custom Tabs.
+* Updates compileSdk version to 34.
+
+## 6.2.3
+
+* Bumps androidx.annotation:annotation from 1.7.0 to 1.7.1.
+
+## 6.2.2
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 6.2.1
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Fixes lint warnings.
+
+## 6.2.0
+
+* Adds support for `inAppBrowserView` as a separate launch mode option from
+  `inAppWebView` mode. `inAppBrowserView` is the preferred in-app mode for most uses,
+  but does not support `closeInAppWebView`.
+* Implements `supportsMode` and `supportsCloseForMode`.
+
+## 6.1.1
+
+* Updates annotations lib to 1.7.0.
+
+## 6.1.0
+
+* Adds support for Android Custom Tabs.
+
+## 6.0.39
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 6.0.38
+
+* Updates android implementation to support api 34 broadcast receiver requirements.
+
 ## 6.0.37
 
 * Sets android.defaults.buildfeatures.buildconfig to true for compatibility with AGP 8.0+.

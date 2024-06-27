@@ -10,8 +10,9 @@ import 'package:pigeon/pigeon.dart';
 
 import 'process_utils.dart';
 
-enum GeneratorLanguages {
+enum GeneratorLanguage {
   cpp,
+  dart,
   java,
   kotlin,
   objc,
@@ -20,8 +21,8 @@ enum GeneratorLanguages {
 
 // A map of pigeons/ files to the languages that they can't yet be generated
 // for due to limitations of that generator.
-const Map<String, Set<GeneratorLanguages>> _unsupportedFiles =
-    <String, Set<GeneratorLanguages>>{};
+const Map<String, Set<GeneratorLanguage>> _unsupportedFiles =
+    <String, Set<GeneratorLanguage>>{};
 
 String _snakeToPascalCase(String snake) {
   final List<String> parts = snake.split('_');
@@ -60,12 +61,14 @@ Future<int> generateTestPigeons({required String baseDir}) async {
     'background_platform_channels',
     'core_tests',
     'enum',
+    'flutter_unittests', // Only for Dart unit tests in shared_test_plugin_code
     'message',
     'multiple_arity',
     'non_null_fields',
     'null_fields',
     'nullable_returns',
     'primitive',
+    'proxy_api_tests',
   ];
 
   final String outputBase = p.join(baseDir, 'platform_tests', 'test_plugin');
@@ -76,33 +79,50 @@ Future<int> generateTestPigeons({required String baseDir}) async {
 
   for (final String input in inputs) {
     final String pascalCaseName = _snakeToPascalCase(input);
-    final Set<GeneratorLanguages> skipLanguages =
-        _unsupportedFiles[input] ?? <GeneratorLanguages>{};
+    final Set<GeneratorLanguage> skipLanguages =
+        _unsupportedFiles[input] ?? <GeneratorLanguage>{};
+
+    final bool kotlinErrorClassGenerationTestFiles =
+        input == 'core_tests' || input == 'background_platform_channels';
+
+    final String kotlinErrorName = kotlinErrorClassGenerationTestFiles
+        ? 'FlutterError'
+        : '${pascalCaseName}Error';
+
+    final bool swiftErrorUseDefaultErrorName = input == 'core_tests';
+
+    final String? swiftErrorClassName =
+        swiftErrorUseDefaultErrorName ? null : '${pascalCaseName}Error';
 
     // Generate the default language test plugin output.
     int generateCode = await runPigeon(
       input: './pigeons/$input.dart',
       dartOut: '$sharedDartOutputBase/lib/src/generated/$input.gen.dart',
+      dartTestOut: input == 'message'
+          ? '$sharedDartOutputBase/test/test_message.gen.dart'
+          : null,
       // Android
-      kotlinOut: skipLanguages.contains(GeneratorLanguages.kotlin)
+      kotlinOut: skipLanguages.contains(GeneratorLanguage.kotlin)
           ? null
           : '$outputBase/android/src/main/kotlin/com/example/test_plugin/$pascalCaseName.gen.kt',
       kotlinPackage: 'com.example.test_plugin',
-      kotlinErrorClassName:
-          input == 'core_tests' ? null : '${pascalCaseName}Error',
+      kotlinErrorClassName: kotlinErrorName,
+      kotlinIncludeErrorClass: input != 'core_tests',
       // iOS
-      swiftOut: skipLanguages.contains(GeneratorLanguages.swift)
+      swiftOut: skipLanguages.contains(GeneratorLanguage.swift)
           ? null
           : '$outputBase/ios/Classes/$pascalCaseName.gen.swift',
+      swiftErrorClassName: swiftErrorClassName,
       // Windows
-      cppHeaderOut: skipLanguages.contains(GeneratorLanguages.cpp)
+      cppHeaderOut: skipLanguages.contains(GeneratorLanguage.cpp)
           ? null
           : '$outputBase/windows/pigeon/$input.gen.h',
-      cppSourceOut: skipLanguages.contains(GeneratorLanguages.cpp)
+      cppSourceOut: skipLanguages.contains(GeneratorLanguage.cpp)
           ? null
           : '$outputBase/windows/pigeon/$input.gen.cpp',
       cppNamespace: '${input}_pigeontest',
       suppressVersion: true,
+      dartPackageName: 'pigeon_integration_tests',
     );
     if (generateCode != 0) {
       return generateCode;
@@ -113,10 +133,12 @@ Future<int> generateTestPigeons({required String baseDir}) async {
     // single invocation.
     generateCode = await runPigeon(
       input: './pigeons/$input.dart',
-      swiftOut: skipLanguages.contains(GeneratorLanguages.swift)
+      swiftOut: skipLanguages.contains(GeneratorLanguage.swift)
           ? null
           : '$outputBase/macos/Classes/$pascalCaseName.gen.swift',
+      swiftErrorClassName: swiftErrorClassName,
       suppressVersion: true,
+      dartPackageName: 'pigeon_integration_tests',
     );
     if (generateCode != 0) {
       return generateCode;
@@ -128,19 +150,21 @@ Future<int> generateTestPigeons({required String baseDir}) async {
       // Android
       // This doesn't use the '.gen' suffix since Java has strict file naming
       // rules.
-      javaOut: skipLanguages.contains(GeneratorLanguages.java)
+      javaOut: skipLanguages.contains(GeneratorLanguage.java)
           ? null
           : '$alternateOutputBase/android/src/main/java/com/example/'
               'alternate_language_test_plugin/${_javaFilenameForName(input)}.java',
       javaPackage: 'com.example.alternate_language_test_plugin',
       // iOS
-      objcHeaderOut: skipLanguages.contains(GeneratorLanguages.objc)
+      objcHeaderOut: skipLanguages.contains(GeneratorLanguage.objc)
           ? null
           : '$alternateOutputBase/ios/Classes/$pascalCaseName.gen.h',
-      objcSourceOut: skipLanguages.contains(GeneratorLanguages.objc)
+      objcSourceOut: skipLanguages.contains(GeneratorLanguage.objc)
           ? null
           : '$alternateOutputBase/ios/Classes/$pascalCaseName.gen.m',
+      objcPrefix: input == 'core_tests' ? 'FLT' : '',
       suppressVersion: true,
+      dartPackageName: 'pigeon_integration_tests',
     );
     if (generateCode != 0) {
       return generateCode;
@@ -151,13 +175,14 @@ Future<int> generateTestPigeons({required String baseDir}) async {
     // single invocation.
     generateCode = await runPigeon(
       input: './pigeons/$input.dart',
-      objcHeaderOut: skipLanguages.contains(GeneratorLanguages.objc)
+      objcHeaderOut: skipLanguages.contains(GeneratorLanguage.objc)
           ? null
           : '$alternateOutputBase/macos/Classes/$pascalCaseName.gen.h',
-      objcSourceOut: skipLanguages.contains(GeneratorLanguages.objc)
+      objcSourceOut: skipLanguages.contains(GeneratorLanguage.objc)
           ? null
           : '$alternateOutputBase/macos/Classes/$pascalCaseName.gen.m',
       suppressVersion: true,
+      dartPackageName: 'pigeon_integration_tests',
     );
     if (generateCode != 0) {
       return generateCode;
@@ -171,7 +196,9 @@ Future<int> runPigeon({
   String? kotlinOut,
   String? kotlinPackage,
   String? kotlinErrorClassName,
+  bool kotlinIncludeErrorClass = true,
   String? swiftOut,
+  String? swiftErrorClassName,
   String? cppHeaderOut,
   String? cppSourceOut,
   String? cppNamespace,
@@ -185,6 +212,7 @@ Future<int> runPigeon({
   bool suppressVersion = false,
   String copyrightHeader = './copyright_header.txt',
   String? basePath,
+  String? dartPackageName,
 }) async {
   // Temporarily suppress the version output via the global flag if requested.
   // This is done because having the version in all the generated test output
@@ -211,13 +239,19 @@ Future<int> runPigeon({
     javaOptions: JavaOptions(package: javaPackage),
     kotlinOut: kotlinOut,
     kotlinOptions: KotlinOptions(
-        package: kotlinPackage, errorClassName: kotlinErrorClassName),
+      package: kotlinPackage,
+      errorClassName: kotlinErrorClassName,
+      includeErrorClass: kotlinIncludeErrorClass,
+    ),
     objcHeaderOut: objcHeaderOut,
     objcSourceOut: objcSourceOut,
     objcOptions: ObjcOptions(prefix: objcPrefix),
     swiftOut: swiftOut,
-    swiftOptions: const SwiftOptions(),
+    swiftOptions: SwiftOptions(
+      errorClassName: swiftErrorClassName,
+    ),
     basePath: basePath,
+    dartPackageName: dartPackageName,
   ));
   includeVersionInGeneratedWarning = originalWarningSetting;
   return result;
@@ -228,7 +262,17 @@ Future<int> runPigeon({
 /// This is intended for formatting generated output, but since there's no
 /// way to filter to specific files in with the repo tooling it runs over the
 /// entire package.
-Future<int> formatAllFiles({required String repositoryRoot}) {
+Future<int> formatAllFiles({
+  required String repositoryRoot,
+  Set<GeneratorLanguage> languages = const <GeneratorLanguage>{
+    GeneratorLanguage.cpp,
+    GeneratorLanguage.dart,
+    GeneratorLanguage.java,
+    GeneratorLanguage.kotlin,
+    GeneratorLanguage.objc,
+    GeneratorLanguage.swift,
+  },
+}) {
   final String dartCommand = Platform.isWindows ? 'dart.exe' : 'dart';
   return runProcess(
       dartCommand,
@@ -237,8 +281,29 @@ Future<int> formatAllFiles({required String repositoryRoot}) {
         'script/tool/bin/flutter_plugin_tools.dart',
         'format',
         '--packages=pigeon',
+        if (languages.contains(GeneratorLanguage.cpp) ||
+            languages.contains(GeneratorLanguage.objc))
+          '--clang-format'
+        else
+          '--no-clang-format',
+        if (languages.contains(GeneratorLanguage.java))
+          '--java'
+        else
+          '--no-java',
+        if (languages.contains(GeneratorLanguage.dart))
+          '--dart'
+        else
+          '--no-dart',
+        if (languages.contains(GeneratorLanguage.kotlin))
+          '--kotlin'
+        else
+          '--no-kotlin',
+        if (languages.contains(GeneratorLanguage.swift))
+          '--swift'
+        else
+          '--no-swift',
       ],
-      streamOutput: false,
       workingDirectory: repositoryRoot,
+      streamOutput: false,
       logFailure: true);
 }

@@ -245,6 +245,18 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///   ([SetStateHandler.stateReference]), followed by the tagged value to which
 ///   to set that state entry ([SetStateHandler.value]).
 ///
+/// ## Limitations
+///
+/// JavaScript does not have a native integer type; all numbers are stored as
+/// [double]s. Data loss may therefore occur when handling integers that cannot
+/// be completely represented as a [binary64] floating point number.
+///
+/// Integers are used for two purposes in this format; as a length, for which it
+/// is extremely unlikely that numbers above 2^53 would be practical anyway, and
+/// for representing integer literals. Thus, when using RFW with JavaScript
+/// environments, it is recommended to use [double]s instead of [int]s whenever
+/// possible, to avoid accidental data loss.
+///
 /// See also:
 ///
 ///  * [encodeLibraryBlob], which encodes this format.
@@ -264,6 +276,10 @@ RemoteWidgetLibrary decodeLibraryBlob(Uint8List bytes) {
 // endianess used by this format
 const Endian _blobEndian = Endian.little;
 
+// whether we can use 64 bit APIs on this platform
+// (on JS, we can only use 32 bit APIs and integers only go up to ~2^53)
+const bool _has64Bits = 0x1000000000000000 + 1 != 0x1000000000000000; // 2^60
+
 // magic signatures
 const int _msFalse = 0x00;
 const int _msTrue = 0x01;
@@ -282,6 +298,8 @@ const int _msEvent = 0x0E;
 const int _msSwitch = 0x0F;
 const int _msDefault = 0x10;
 const int _msSetState = 0x11;
+const int _msWidgetBuilder = 0x12;
+const int _msWidgetBuilderArgReference = 0x13;
 
 /// API for decoding Remote Flutter Widgets binary blobs.
 ///
@@ -316,7 +334,14 @@ class _BlobDecoder {
   int _readInt64() {
     final int byteOffset = _cursor;
     _advance('int64', 8);
-    return bytes.getInt64(byteOffset, _blobEndian);
+    if (_has64Bits) {
+      return bytes.getInt64(byteOffset, _blobEndian);
+    }
+    // We use multiplication rather than bit shifts because << truncates to 32 bits when compiled to JS:
+    // https://dart.dev/guides/language/numbers#bitwise-operations
+    final int a = bytes.getUint32(byteOffset, _blobEndian); // dead code on VM target
+    final int b = bytes.getInt32(byteOffset + 4, _blobEndian); // dead code on VM target
+    return a + (b * 0x100000000); // dead code on VM target
   }
 
   double _readBinary64() {
@@ -430,6 +455,10 @@ class _BlobDecoder {
         return _readSwitch();
       case _msSetState:
         return SetStateHandler(StateReference(_readPartList()), _readArgument());
+      case _msWidgetBuilder:
+        return _readWidgetBuilder();
+      case _msWidgetBuilderArgReference:
+        return WidgetBuilderArgReference(_readString(), _readPartList());
       default:
         return _parseValue(type, _readArgument);
     }
@@ -445,6 +474,16 @@ class _BlobDecoder {
     return ConstructorCall(name, _readMap(_readArgument)!);
   }
 
+  WidgetBuilderDeclaration _readWidgetBuilder() {
+    final String argumentName = _readString();
+    final int type = _readByte();
+    if (type != _msWidget && type != _msSwitch) {
+      throw FormatException('Unrecognized data type 0x${type.toRadixString(16).toUpperCase().padLeft(2, "0")} while decoding widget builder blob.');
+    }
+    final BlobNode widget = type == _msWidget ? _readWidget() : _readSwitch();
+    return WidgetBuilderDeclaration(argumentName, widget);
+  }
+
   WidgetDeclaration _readDeclaration() {
     final String name = _readString();
     final DynamicMap? initialState = _readMap(readValue, nullIfEmpty: true);
@@ -453,10 +492,8 @@ class _BlobDecoder {
     switch (type) {
       case _msSwitch:
         root = _readSwitch();
-        break;
       case _msWidget:
         root = _readWidget();
-        break;
       default:
         throw FormatException('Unrecognized data type 0x${type.toRadixString(16).toUpperCase().padLeft(2, "0")} while decoding widget declaration root.');
     }
@@ -516,7 +553,19 @@ class _BlobEncoder {
   final BytesBuilder bytes = BytesBuilder(); // copying builder -- we repeatedly add _scratchOut after changing it
 
   void _writeInt64(int value) {
-    _scratchIn.setInt64(0, value, _blobEndian);
+    if (_has64Bits) {
+      _scratchIn.setInt64(0, value, _blobEndian);
+    } else {
+      // We use division rather than bit shifts because >> truncates to 32 bits when compiled to JS:
+      // https://dart.dev/guides/language/numbers#bitwise-operations
+      if (value >= 0) { // dead code on VM target
+        _scratchIn.setInt32(0, value, _blobEndian); // dead code on VM target
+        _scratchIn.setInt32(4, value ~/ 0x100000000, _blobEndian); // dead code on VM target
+      } else {
+        _scratchIn.setInt32(0, value, _blobEndian); // dead code on VM target
+        _scratchIn.setInt32(4, -((-value) ~/ 0x100000000 + 1), _blobEndian); // dead code on VM target
+      }
+    }
     bytes.add(_scratchOut);
   }
 
@@ -551,7 +600,7 @@ class _BlobEncoder {
       bytes.addByte(_msFalse);
     } else if (value == true) {
       bytes.addByte(_msTrue);
-    } else if (value is double) {
+    } else if (value is double && value is! int) { // When compiled to JS, a Number can be both.
       bytes.addByte(_msBinary64);
       _scratchIn.setFloat64(0, value, _blobEndian);
       bytes.add(_scratchOut);
@@ -580,12 +629,21 @@ class _BlobEncoder {
       bytes.addByte(_msWidget);
       _writeString(value.name);
       _writeMap(value.arguments, _writeArgument);
+    } else if (value is WidgetBuilderDeclaration) {
+      bytes.addByte(_msWidgetBuilder);
+      _writeString(value.argumentName);
+      _writeArgument(value.widget);
     } else if (value is ArgsReference) {
       bytes.addByte(_msArgsReference);
       _writeInt64(value.parts.length);
       value.parts.forEach(_writePart);
     } else if (value is DataReference) {
       bytes.addByte(_msDataReference);
+      _writeInt64(value.parts.length);
+      value.parts.forEach(_writePart);
+    } else if (value is WidgetBuilderArgReference) {
+      bytes.addByte(_msWidgetBuilderArgReference);
+      _writeString(value.argumentName);
       _writeInt64(value.parts.length);
       value.parts.forEach(_writePart);
     } else if (value is LoopReference) {

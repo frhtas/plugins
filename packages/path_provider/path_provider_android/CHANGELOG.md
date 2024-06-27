@@ -1,5 +1,43 @@
-## NEXT
+## 2.2.6
 
+* Updates annotations lib to 1.8.0.
+
+## 2.2.5
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 2.2.4
+
+* Updates minSdkVersion version to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 2.2.3
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates compileSdk version to 34.
+
+## 2.2.2
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Updates annotations lib to 1.7.1.
+
+## 2.2.1
+
+* Updates annotations lib to 1.7.0.
+
+## 2.2.0
+
+* Adds implementation of `getDownloadsDirectory()`.
+
+## 2.1.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 2.1.0
+
+* Adds getApplicationCachePath() for storing app-specific cache files.
 * Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
 
 ## 2.0.27

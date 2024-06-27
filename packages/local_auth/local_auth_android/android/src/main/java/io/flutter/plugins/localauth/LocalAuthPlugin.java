@@ -27,7 +27,6 @@ import io.flutter.plugins.localauth.Messages.AuthClassification;
 import io.flutter.plugins.localauth.Messages.AuthClassificationWrapper;
 import io.flutter.plugins.localauth.Messages.AuthOptions;
 import io.flutter.plugins.localauth.Messages.AuthResult;
-import io.flutter.plugins.localauth.Messages.AuthResultWrapper;
 import io.flutter.plugins.localauth.Messages.AuthStrings;
 import io.flutter.plugins.localauth.Messages.LocalAuthApi;
 import io.flutter.plugins.localauth.Messages.Result;
@@ -51,7 +50,7 @@ public class LocalAuthPlugin implements FlutterPlugin, ActivityAware, LocalAuthA
   private Lifecycle lifecycle;
   private BiometricManager biometricManager;
   private KeyguardManager keyguardManager;
-  Result<AuthResultWrapper> lockRequestResult;
+  Result<AuthResult> lockRequestResult;
   private final PluginRegistry.ActivityResultListener resultListener =
       new PluginRegistry.ActivityResultListener() {
         @Override
@@ -67,22 +66,6 @@ public class LocalAuthPlugin implements FlutterPlugin, ActivityAware, LocalAuthA
           return false;
         }
       };
-
-  /**
-   * Registers a plugin with the v1 embedding api {@code io.flutter.plugin.common}.
-   *
-   * <p>Calling this will register the plugin with the passed registrar. However, plugins
-   * initialized this way won't react to changes in activity or context.
-   *
-   * @param registrar provides access to necessary plugin context.
-   */
-  @SuppressWarnings("deprecation")
-  public static void registerWith(@NonNull PluginRegistry.Registrar registrar) {
-    final LocalAuthPlugin plugin = new LocalAuthPlugin();
-    plugin.activity = registrar.activity();
-    LocalAuthApi.setup(registrar.messenger(), plugin);
-    registrar.addActivityResultListener(plugin.resultListener);
-  }
 
   /**
    * Default constructor for LocalAuthPlugin.
@@ -132,28 +115,24 @@ public class LocalAuthPlugin implements FlutterPlugin, ActivityAware, LocalAuthA
   public void authenticate(
       @NonNull AuthOptions options,
       @NonNull AuthStrings strings,
-      @NonNull Result<AuthResultWrapper> result) {
+      @NonNull Result<AuthResult> result) {
     if (authInProgress.get()) {
-      result.success(
-          new AuthResultWrapper.Builder().setValue(AuthResult.ERROR_ALREADY_IN_PROGRESS).build());
+      result.success(AuthResult.ERROR_ALREADY_IN_PROGRESS);
       return;
     }
 
     if (activity == null || activity.isFinishing()) {
-      result.success(
-          new AuthResultWrapper.Builder().setValue(AuthResult.ERROR_NO_ACTIVITY).build());
+      result.success(AuthResult.ERROR_NO_ACTIVITY);
       return;
     }
 
     if (!(activity instanceof FragmentActivity)) {
-      result.success(
-          new AuthResultWrapper.Builder().setValue(AuthResult.ERROR_NOT_FRAGMENT_ACTIVITY).build());
+      result.success(AuthResult.ERROR_NOT_FRAGMENT_ACTIVITY);
       return;
     }
 
     if (!isDeviceSupported()) {
-      result.success(
-          new AuthResultWrapper.Builder().setValue(AuthResult.ERROR_NOT_AVAILABLE).build());
+      result.success(AuthResult.ERROR_NOT_AVAILABLE);
       return;
     }
 
@@ -167,7 +146,7 @@ public class LocalAuthPlugin implements FlutterPlugin, ActivityAware, LocalAuthA
 
   @VisibleForTesting
   public @NonNull AuthCompletionHandler createAuthCompletionHandler(
-      @NonNull final Result<AuthResultWrapper> result) {
+      @NonNull final Result<AuthResult> result) {
     return authResult -> onAuthenticationCompleted(result, authResult);
   }
 
@@ -189,9 +168,9 @@ public class LocalAuthPlugin implements FlutterPlugin, ActivityAware, LocalAuthA
     authHelper.authenticate();
   }
 
-  void onAuthenticationCompleted(Result<AuthResultWrapper> result, AuthResult value) {
+  void onAuthenticationCompleted(Result<AuthResult> result, AuthResult value) {
     if (authInProgress.compareAndSet(true, false)) {
-      result.success(new AuthResultWrapper.Builder().setValue(value).build());
+      result.success(value);
     }
   }
 

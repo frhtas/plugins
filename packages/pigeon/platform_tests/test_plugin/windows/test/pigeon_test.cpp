@@ -85,12 +85,16 @@ TEST(PigeonTests, CallInitialize) {
   flutter::BinaryMessageHandler handler;
   EXPECT_CALL(
       mock_messenger,
-      SetMessageHandler("dev.flutter.pigeon.MessageApi.initialize", testing::_))
+      SetMessageHandler(
+          "dev.flutter.pigeon.pigeon_integration_tests.MessageApi.initialize",
+          testing::_))
       .Times(1)
       .WillOnce(testing::SaveArg<1>(&handler));
   EXPECT_CALL(
       mock_messenger,
-      SetMessageHandler("dev.flutter.pigeon.MessageApi.search", testing::_))
+      SetMessageHandler(
+          "dev.flutter.pigeon.pigeon_integration_tests.MessageApi.search",
+          testing::_))
       .Times(1);
   EXPECT_CALL(mock_api, Initialize());
   MessageApi::SetUp(&mock_messenger, &mock_api);
@@ -109,11 +113,15 @@ TEST(PigeonTests, CallSearch) {
   flutter::BinaryMessageHandler handler;
   EXPECT_CALL(
       mock_messenger,
-      SetMessageHandler("dev.flutter.pigeon.MessageApi.initialize", testing::_))
+      SetMessageHandler(
+          "dev.flutter.pigeon.pigeon_integration_tests.MessageApi.initialize",
+          testing::_))
       .Times(1);
   EXPECT_CALL(
       mock_messenger,
-      SetMessageHandler("dev.flutter.pigeon.MessageApi.search", testing::_))
+      SetMessageHandler(
+          "dev.flutter.pigeon.pigeon_integration_tests.MessageApi.search",
+          testing::_))
       .Times(1)
       .WillOnce(testing::SaveArg<1>(&handler));
   EXPECT_CALL(mock_api, Search(testing::_))
@@ -129,7 +137,7 @@ TEST(PigeonTests, CallSearch) {
   Writer writer;
   flutter::EncodableList args;
   args.push_back(flutter::CustomEncodableValue(request));
-  MessageApiCodecSerializer::GetInstance().WriteValue(args, &writer);
+  PigeonCodecSerializer::GetInstance().WriteValue(args, &writer);
   handler(writer.data_.data(), writer.data_.size(), reply);
   EXPECT_TRUE(did_call_reply);
 }

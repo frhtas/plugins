@@ -1,3 +1,77 @@
+## 0.8.12+3
+
+* Update documentation to note that limit is not always supported.
+
+## 0.8.12+2
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 0.8.12+1
+
+* Fixes another app crash case on Android 12+, and refactors getting of paths from intents.
+
+## 0.8.12
+
+* Fixes app crashes on Android 12+ caused by selecting images with size 0.
+
+## 0.8.11
+
+* Updates documentation to note that Android Photo Picker use is not optional on Android 13+.
+
+## 0.8.10
+
+* Adds limit parameter to `MediaOptions` and `MultiImagePickerOptions` that sets a limit to how many media or image items can be selected.
+
+## 0.8.9+6
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 0.8.9+5
+
+* Bumps androidx.exifinterface:exifinterface from 1.3.6 to 1.3.7.
+
+## 0.8.9+4
+
+* Minimizes scope of deprecation warning suppression to only the versions where it is required.
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates compileSdk version to 34.
+
+## 0.8.9+3
+
+* Bumps androidx.annotation:annotation from 1.7.0 to 1.7.1.
+
+## 0.8.9+2
+
+* Fixes new lint warnings.
+
+## 0.8.9+1
+
+* Updates plugin and example Gradle versions to 7.6.3.
+
+## 0.8.9
+
+* Fixes resizing bug and updates rounding to be more accurate.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 0.8.8+2
+
+* Updates annotations lib to 1.7.0.
+
+## 0.8.8+1
+
+* Fixes NullPointerException on pre-Android 13 devices when using Android Photo Picker to pick image or video.
+
+## 0.8.8
+
+* Adds additional category II and III exif tags to be copied during photo resize.
+
+## 0.8.7+5
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
 ## 0.8.7+4
 
 * Updates the example to use the latest versions of the platform interface APIs.

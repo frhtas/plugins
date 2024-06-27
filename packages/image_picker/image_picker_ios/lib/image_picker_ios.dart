@@ -88,7 +88,7 @@ class ImagePickerIOS extends ImagePickerPlatform {
     double? maxHeight,
     int? imageQuality,
   }) async {
-    final List<dynamic>? paths = await _pickMultiImageAsPath(
+    final List<dynamic> paths = await _pickMultiImageAsPath(
       options: MultiImagePickerOptions(
         imageOptions: ImageOptions(
           maxWidth: maxWidth,
@@ -97,7 +97,9 @@ class ImagePickerIOS extends ImagePickerPlatform {
         ),
       ),
     );
-    if (paths == null) {
+    // Convert an empty list to a null return since that was the legacy behavior
+    // of this method.
+    if (paths.isEmpty) {
       return null;
     }
 
@@ -108,15 +110,11 @@ class ImagePickerIOS extends ImagePickerPlatform {
   Future<List<XFile>> getMultiImageWithOptions({
     MultiImagePickerOptions options = const MultiImagePickerOptions(),
   }) async {
-    final List<String>? paths = await _pickMultiImageAsPath(options: options);
-    if (paths == null) {
-      return <XFile>[];
-    }
-
+    final List<String> paths = await _pickMultiImageAsPath(options: options);
     return paths.map((String path) => XFile(path)).toList();
   }
 
-  Future<List<String>?> _pickMultiImageAsPath({
+  Future<List<String>> _pickMultiImageAsPath({
     MultiImagePickerOptions options = const MultiImagePickerOptions(),
   }) async {
     final int? imageQuality = options.imageOptions.imageQuality;
@@ -135,13 +133,20 @@ class ImagePickerIOS extends ImagePickerPlatform {
       throw ArgumentError.value(maxHeight, 'maxHeight', 'cannot be negative');
     }
 
+    final int? limit = options.limit;
+    if (limit != null && limit < 2) {
+      throw ArgumentError.value(limit, 'limit', 'cannot be lower than 2');
+    }
+
     // TODO(stuartmorgan): Remove the cast once Pigeon supports non-nullable
     //  generics, https://github.com/flutter/flutter/issues/97848
     return (await _hostApi.pickMultiImage(
-            MaxSize(width: maxWidth, height: maxHeight),
-            imageQuality,
-            options.imageOptions.requestFullMetadata))
-        ?.cast<String>();
+      MaxSize(width: maxWidth, height: maxHeight),
+      imageQuality,
+      options.imageOptions.requestFullMetadata,
+      limit,
+    ))
+        .cast<String>();
   }
 
   Future<String?> _pickImageAsPath({
@@ -212,11 +217,28 @@ class ImagePickerIOS extends ImagePickerPlatform {
       MediaOptions mediaOptions) {
     final MaxSize maxSize =
         _imageOptionsToMaxSizeWithValidation(mediaOptions.imageOptions);
+
+    final bool allowMultiple = mediaOptions.allowMultiple;
+    final int? limit = mediaOptions.limit;
+
+    if (!allowMultiple && limit != null) {
+      throw ArgumentError.value(
+        allowMultiple,
+        'allowMultiple',
+        'cannot be false, when limit is not null',
+      );
+    }
+
+    if (limit != null && limit < 2) {
+      throw ArgumentError.value(limit, 'limit', 'cannot be lower than 2');
+    }
+
     return MediaSelectionOptions(
       maxSize: maxSize,
       imageQuality: mediaOptions.imageOptions.imageQuality,
       requestFullMetadata: mediaOptions.imageOptions.requestFullMetadata,
       allowMultiple: mediaOptions.allowMultiple,
+      limit: mediaOptions.limit,
     );
   }
 
@@ -272,7 +294,7 @@ class ImagePickerIOS extends ImagePickerPlatform {
     double? maxHeight,
     int? imageQuality,
   }) async {
-    final List<String>? paths = await _pickMultiImageAsPath(
+    final List<String> paths = await _pickMultiImageAsPath(
       options: MultiImagePickerOptions(
         imageOptions: ImageOptions(
           maxWidth: maxWidth,
@@ -281,7 +303,9 @@ class ImagePickerIOS extends ImagePickerPlatform {
         ),
       ),
     );
-    if (paths == null) {
+    // Convert an empty list to a null return since that was the legacy behavior
+    // of this method.
+    if (paths.isEmpty) {
       return null;
     }
 

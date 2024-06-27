@@ -1,3 +1,94 @@
+## 0.10.9+6
+
+* Reverts changes to support Impeller.
+
+## 0.10.9+5
+
+* Updates annotations lib to 1.8.0.
+
+## 0.10.9+4
+
+* [Supports Impeller](https://docs.flutter.dev/release/breaking-changes/android-surface-plugins).
+
+## 0.10.9+3
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 0.10.9+2
+
+* Updates `README.md` to reflect the fact that the `camera_android_camerax` camera plugin implementation
+  is the endorsed Android implementation for `camera: ^0.11.0`.
+
+## 0.10.9+1
+
+* Changes the visibility of a number of fields to `@VisibleForTesting` in order simplify testing.
+
+## 0.10.9
+
+* Adds support to control video FPS and bitrate. See `CameraController.withSettings`.
+
+## 0.10.8+18
+
+* Updates annotations lib to 1.7.1.
+
+## 0.10.8+17
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates compileSdk version to 34.
+* Updates `README.md` to encourage developers to opt into `camera_android_camerax`.
+
+## 0.10.8+16
+
+* Fixes new lint warnings.
+
+## 0.10.8+15
+
+* Updates example app to use non-deprecated video_player method.
+
+## 0.10.8+14
+
+* Fixes `pausePreview` null pointer error. `pausePreview` should not be called
+  when camera is closed or not configured.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 0.10.8+13
+
+* Updates annotations lib to 1.7.0.
+
+## 0.10.8+12
+
+* Fixes handling of autofocus state when taking a picture.
+
+## 0.10.8+11
+
+* Downgrades AGP version for compatibility with legacy projects.
+
+## 0.10.8+10
+
+* Sets android.defaults.buildfeatures.buildconfig to true for compatibility with AGP 8.0+.
+
+## 0.10.8+9
+
+* Removes usage of `_ambiguate` method in example.
+
+## 0.10.8+8
+
+* Adds pub topics to package metadata.
+
+## 0.10.8+7
+
+* Fixes video record crash on Android versions lower than 12.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.10.8+6
+
+* Migrates `styleFrom` usage in examples off of deprecated `primary` and `onPrimary` parameters.
+
+## 0.10.8+5
+
+* Provides a default exposure point if null.
+
 ## 0.10.8+4
 
 * Adjusts SDK checks for better testability.

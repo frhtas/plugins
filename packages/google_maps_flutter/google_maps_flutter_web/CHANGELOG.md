@@ -1,3 +1,56 @@
+## 0.5.8
+
+* Adds support for BitmapDescriptor classes `AssetMapBitmap` and `BytesMapBitmap`.
+
+## 0.5.7
+
+* Adds support for marker clustering.
+
+## 0.5.6+2
+
+* Uses `TrustedTypes` from `web: ^0.5.1`.
+
+## 0.5.6+1
+
+* Fixes an issue where `dart:js_interop` object literal factories did not
+  compile with dart2js.
+
+## 0.5.6
+
+* Adds support for `MapConfiguration.style`.
+* Adds support for `getStyleError`.
+
+## 0.5.5
+* Migrates to `dart:js_interop` and `package:web` APIs.
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 0.5.4+3
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Fixes new lint warnings.
+
+## 0.5.4+2
+
+* Migrates to `dart:ui_web` APIs.
+* Updates minimum supported SDK version to Flutter 3.13.0/Dart 3.1.0.
+
+## 0.5.4+1
+
+* Adds pub topics to package metadata.
+
+## 0.5.4
+
+* Adds implementation for `cloudMapId` parameter to support cloud-based maps styling.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.5.3
+
+* Initial support for custom overlays. [#98596](https://github.com/flutter/flutter/issues/98596).
+
+## 0.5.2
+
+* Adds options for gesture handling and tilt controls.
+
 ## 0.5.1
 
 * Adds padding support to `CameraUpdate.newLatLngBounds`. Issue [#122192](https://github.com/flutter/flutter/issues/122192).

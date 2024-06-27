@@ -133,6 +133,18 @@ void main() {
         await controller.seekTo(tenMillisBeforeEnd);
         await controller.play();
         await tester.pumpAndSettle(_playDuration);
+        // Android emulators in our CI have frequent flake where the video
+        // reports as still playing (usually without having advanced at all
+        // past the seek position, but sometimes having advanced some); if that
+        // happens, the thing being tested hasn't even had a chance to happen
+        // due to CI issues, so just report it as skipped.
+        // TODO(stuartmorgan): Remove once
+        // https://github.com/flutter/flutter/issues/141145 is fixed.
+        if ((!kIsWeb && Platform.isAndroid) && controller.value.isPlaying) {
+          markTestSkipped(
+              'Skipping due to https://github.com/flutter/flutter/issues/141145');
+          return;
+        }
         expect(controller.value.isPlaying, false);
         expect(controller.value.position, controller.value.duration);
 
@@ -157,6 +169,18 @@ void main() {
             controller.value.duration - const Duration(milliseconds: 10));
         await controller.play();
         await tester.pumpAndSettle(_playDuration);
+        // Android emulators in our CI have frequent flake where the video
+        // reports as still playing (usually without having advanced at all
+        // past the seek position, but sometimes having advanced some); if that
+        // happens, the thing being tested hasn't even had a chance to happen
+        // due to CI issues, so just report it as skipped.
+        // TODO(stuartmorgan): Remove once
+        // https://github.com/flutter/flutter/issues/141145 is fixed.
+        if ((!kIsWeb && Platform.isAndroid) && controller.value.isPlaying) {
+          markTestSkipped(
+              'Skipping due to https://github.com/flutter/flutter/issues/141145');
+          return;
+        }
         expect(controller.value.isPlaying, false);
         expect(controller.value.position, controller.value.duration);
 
@@ -170,9 +194,11 @@ void main() {
 
     testWidgets('test video player view with local asset',
         (WidgetTester tester) async {
+      final Completer<void> loaded = Completer<void>();
       Future<bool> started() async {
         await controller.initialize();
         await controller.play();
+        loaded.complete();
         return true;
       }
 
@@ -197,12 +223,12 @@ void main() {
         ),
       ));
 
+      await loaded.future;
       await tester.pumpAndSettle();
       expect(controller.value.isPlaying, true);
     },
-        skip: kIsWeb || // Web does not support local assets.
-            // Extremely flaky on iOS: https://github.com/flutter/flutter/issues/86915
-            defaultTargetPlatform == TargetPlatform.iOS);
+        // Web does not support local assets.
+        skip: kIsWeb);
   });
 
   group('file-based videos', () {

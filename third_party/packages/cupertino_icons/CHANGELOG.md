@@ -1,9 +1,24 @@
 ## NEXT
 
-* Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 1.0.8
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Vertically center aligns the icons.
+* Fixes overlapping / broken outlines for glyphs such as "create\_solid" and "car\_fill"
+
+## 1.0.7
+
+* Adds example.md file to display usage.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 1.0.6
+
+* Adds pub topics to package metadata.
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
 * Aligns Dart and Flutter SDK constraints.
-* Aligns Dart and Flutter SDK constraints.
-* Updates minimum SDK version to Flutter 3.0.
 
 ## 1.0.5
 

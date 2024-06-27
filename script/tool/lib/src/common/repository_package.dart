@@ -72,24 +72,28 @@ class RepositoryPackage {
     switch (platform) {
       case FlutterPlatform.android:
         directoryName = 'android';
-        break;
       case FlutterPlatform.ios:
         directoryName = 'ios';
-        break;
       case FlutterPlatform.linux:
         directoryName = 'linux';
-        break;
       case FlutterPlatform.macos:
         directoryName = 'macos';
-        break;
       case FlutterPlatform.web:
         directoryName = 'web';
-        break;
       case FlutterPlatform.windows:
         directoryName = 'windows';
-        break;
     }
     return directory.childDirectory(directoryName);
+  }
+
+  /// Returns true if the package is an app that supports [platform].
+  ///
+  /// The "app" prefix on this method is because this currently only works
+  /// for app packages (e.g., examples).
+  // TODO(stuartmorgan): Add support for non-app packages, by parsing the
+  // pubspec for `flutter:platform:` or `platform:` sections.
+  bool appSupportsPlatform(FlutterPlatform platform) {
+    return platformDirectory(platform).existsSync();
   }
 
   late final Pubspec _parsedPubspec =
@@ -102,8 +106,10 @@ class RepositoryPackage {
 
   /// Returns true if the package depends on Flutter.
   bool requiresFlutter() {
+    const String flutterDependency = 'flutter';
     final Pubspec pubspec = parsePubspec();
-    return pubspec.dependencies.containsKey('flutter');
+    return pubspec.dependencies.containsKey(flutterDependency) ||
+        pubspec.devDependencies.containsKey(flutterDependency);
   }
 
   /// True if this appears to be a federated plugin package, according to
@@ -131,6 +137,20 @@ class RepositoryPackage {
       isFederated &&
       !isPlatformInterface &&
       directory.basename != directory.parent.basename;
+
+  /// True if this appears to be an example package, according to package
+  /// conventions.
+  bool get isExample {
+    final RepositoryPackage? enclosingPackage = getEnclosingPackage();
+    if (enclosingPackage == null) {
+      // An example package is enclosed in another package.
+      return false;
+    }
+    // Check whether this is one of the enclosing package's examples.
+    return enclosingPackage
+        .getExamples()
+        .any((RepositoryPackage p) => p.path == path);
+  }
 
   /// Returns the Flutter example packages contained in the package, if any.
   Iterable<RepositoryPackage> getExamples() {
@@ -165,5 +185,10 @@ class RepositoryPackage {
       return RepositoryPackage(parent.parent);
     }
     return null;
+  }
+
+  /// Returns true if the package is not marked as "publish_to: none".
+  bool isPublishable() {
+    return parsePubspec().publishTo != 'none';
   }
 }

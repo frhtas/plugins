@@ -1,3 +1,73 @@
+## 2.7.0
+
+- Adds an example and a test with `onExit`.
+- Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 2.6.2
+
+* Fixes a bug in the example app when accessing `BuildContext`.
+
+## 2.6.1
+
+* Fixes typo in `durationDecoderHelperName`.
+* Updates development dependency to `dart_style-2.3.6` (compatible with `analyzer-6.5.0`).
+
+## 2.6.0
+
+* Adds support for passing observers to the StatefulShellBranch for the nested Navigator.
+
+## 2.5.1
+
+- Updates examples to use uri.path instead of uri.toString() for accessing the current location.
+
+## 2.5.0
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates dependencies to require `analyzer` 5.2.0 or later.
+* Adds `restorationScopeId` to `ShellRouteData`.
+
+## 2.4.1
+
+* Fixes new lint warnings.
+
+## 2.4.0
+
+* Adds support for passing observers to the ShellRoute for the nested Navigator.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 2.3.4
+
+* Fixes a bug of typeArguments losing NullabilitySuffix
+
+## 2.3.3
+
+* Adds `initialLocation` for `StatefulShellBranchConfig`
+
+## 2.3.2
+
+* Supports the latest `package:analyzer`.
+
+## 2.3.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 2.3.0
+
+* Adds Support for StatefulShellRoute
+
+## 2.2.5
+
+* Fixes a bug where shell routes without const constructor were not generated correctly.
+
+## 2.2.4
+
+* Bumps example go_router version to v10.0.0 and migrate example code.
+
+## 2.2.3
+
+* Removes `path_to_regexp` from the dependencies.
+
 ## 2.2.2
 
 * Bumps example go_router version and migrate example code.

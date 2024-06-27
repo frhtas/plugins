@@ -1,3 +1,17 @@
+## NEXT
+
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 1.0.13
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates dependency on `package:googleapis` to `^12.0.0`.
+
+## 1.0.12
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
 ## 1.0.11
 
 * Removes the dependency on `package:equatable`.

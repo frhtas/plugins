@@ -1,3 +1,41 @@
+## 6.1.26
+
+* Removes additional references to the v1 Android embedding.
+
+## 6.1.25
+
+* Updates Guava to version 33.2.1.
+
+## 6.1.24
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 6.1.23
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 6.1.22
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates compileSdk version to 34.
+* Updates play-services-auth version to 21.0.0.
+
+## 6.1.21
+
+* Updates `clearAuthCache` override to match base class declaration.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 6.1.20
+
+* Updates play-services-auth version to 20.7.0.
+
+## 6.1.19
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
 ## 6.1.18
 
 * Updates play-services-auth version to 20.6.0.

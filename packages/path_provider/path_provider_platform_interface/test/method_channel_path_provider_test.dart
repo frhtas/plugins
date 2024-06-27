@@ -14,6 +14,7 @@ void main() {
   const String kApplicationSupportPath = 'applicationSupportPath';
   const String kLibraryPath = 'libraryPath';
   const String kApplicationDocumentsPath = 'applicationDocumentsPath';
+  const String kApplicationCachePath = 'applicationCachePath';
   const String kExternalCachePaths = 'externalCachePaths';
   const String kExternalStoragePaths = 'externalStoragePaths';
   const String kDownloadsPath = 'downloadsPath';
@@ -25,8 +26,7 @@ void main() {
     setUp(() async {
       methodChannelPathProvider = MethodChannelPathProvider();
 
-      _ambiguate(TestDefaultBinaryMessengerBinding.instance)!
-          .defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(methodChannelPathProvider.methodChannel,
               (MethodCall methodCall) async {
         log.add(methodCall);
@@ -39,6 +39,8 @@ void main() {
             return kLibraryPath;
           case 'getApplicationDocumentsDirectory':
             return kApplicationDocumentsPath;
+          case 'getApplicationCacheDirectory':
+            return kApplicationCachePath;
           case 'getExternalStorageDirectories':
             return <String>[kExternalStoragePaths];
           case 'getExternalCacheDirectories':
@@ -126,6 +128,18 @@ void main() {
       expect(path, kApplicationDocumentsPath);
     });
 
+    test('getApplicationCachePath succeeds', () async {
+      final String? result =
+          await methodChannelPathProvider.getApplicationCachePath();
+      expect(
+        log,
+        <Matcher>[
+          isMethodCall('getApplicationCacheDirectory', arguments: null)
+        ],
+      );
+      expect(result, kApplicationCachePath);
+    });
+
     test('getExternalCachePaths android succeeds', () async {
       final List<String>? result =
           await methodChannelPathProvider.getExternalCachePaths();
@@ -206,9 +220,3 @@ void main() {
     });
   });
 }
-
-/// This allows a value of type T or T? to be treated as a value of type T?.
-///
-/// We use this so that APIs that have become non-nullable can still be used
-/// with `!` and `?` on the stable branch.
-T? _ambiguate<T>(T? value) => value;

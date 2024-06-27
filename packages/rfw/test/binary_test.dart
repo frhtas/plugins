@@ -9,6 +9,11 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rfw/formats.dart';
 
+// This is a number that requires more than 32 bits but less than 53 bits, so
+// that it works in a JS Number and tests the logic that parses 64 bit ints as
+// two separate 32 bit ints.
+const int largeNumber = 9007199254730661;
+
 void main() {
   testWidgets('String example', (WidgetTester tester) async {
     final Uint8List bytes = encodeDataBlob('Hello');
@@ -16,6 +21,48 @@ void main() {
     final Object value = decodeDataBlob(bytes);
     expect(value, isA<String>());
     expect(value, 'Hello');
+  });
+
+  testWidgets('Big integer example', (WidgetTester tester) async {
+    // This value is intentionally inside the JS Number range but above 2^32.
+    final Uint8List bytes = encodeDataBlob(largeNumber);
+    expect(bytes, <int>[ 0xfe, 0x52, 0x57, 0x44, 0x02, 0xa5, 0xd7, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x00, ]);
+    final Object value = decodeDataBlob(bytes);
+    expect(value, isA<int>());
+    expect(value, largeNumber);
+  });
+
+  testWidgets('Big negative integer example', (WidgetTester tester) async {
+    final Uint8List bytes = encodeDataBlob(-largeNumber);
+    expect(bytes, <int>[ 0xfe, 0x52, 0x57, 0x44, 0x02, 0x5b, 0x28, 0x00, 0x00, 0x00, 0x00, 0xe0, 0xff, ]);
+    final Object value = decodeDataBlob(bytes);
+    expect(value, isA<int>());
+    expect(value, -largeNumber);
+  });
+
+  testWidgets('Small integer example', (WidgetTester tester) async {
+    final Uint8List bytes = encodeDataBlob(1);
+    expect(bytes, <int>[ 0xfe, 0x52, 0x57, 0x44, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ]);
+    final Object value = decodeDataBlob(bytes);
+    expect(value, isA<int>());
+    expect(value, 1);
+  });
+
+  testWidgets('Small negative integer example', (WidgetTester tester) async {
+    final Uint8List bytes = encodeDataBlob(-1);
+    expect(bytes, <int>[ 0xfe, 0x52, 0x57, 0x44, 0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, ]);
+    final Object value = decodeDataBlob(bytes);
+    expect(value, isA<int>());
+    expect(value, -1);
+  });
+
+  testWidgets('Zero integer example', (WidgetTester tester) async {
+    // This value is intentionally inside the JS Number range but above 2^32.
+    final Uint8List bytes = encodeDataBlob(0);
+    expect(bytes, <int>[ 0xfe, 0x52, 0x57, 0x44, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ]);
+    final Object value = decodeDataBlob(bytes);
+    expect(value, isA<int>());
+    expect(value, 0);
   });
 
   testWidgets('Map example', (WidgetTester tester) async {
@@ -455,5 +502,42 @@ void main() {
     expect(value.widgets.first.root, isA<ConstructorCall>());
     expect((value.widgets.first.root as ConstructorCall).name, 'c');
     expect((value.widgets.first.root as ConstructorCall).arguments, isEmpty);
+  });
+
+  testWidgets('Library encoder: widget builders work',  (WidgetTester tester) async {
+    const String source = '''
+      widget Foo = Builder(
+        builder: (scope) => Text(text: scope.text),
+      );
+    ''';
+    final RemoteWidgetLibrary library = parseLibraryFile(source);
+    final Uint8List encoded = encodeLibraryBlob(library);
+    final RemoteWidgetLibrary decoded = decodeLibraryBlob(encoded);
+
+    expect(library.toString(), decoded.toString());
+  });
+
+  testWidgets('Library encoder: widget builders throws',  (WidgetTester tester) async {
+    const RemoteWidgetLibrary remoteWidgetLibrary = RemoteWidgetLibrary(
+      <Import>[], 
+      <WidgetDeclaration>[
+        WidgetDeclaration(
+          'a', 
+          <String, Object?>{},
+          ConstructorCall(
+            'c', 
+            <String, Object?>{
+              'builder': WidgetBuilderDeclaration('scope', ArgsReference(<Object>[])),
+            },
+          ),
+        ),
+      ],
+    );
+    try {
+      decodeLibraryBlob(encodeLibraryBlob(remoteWidgetLibrary));
+      fail('did not throw exception');
+    } on FormatException catch (e) {
+      expect('$e', contains('Unrecognized data type 0x0A while decoding widget builder blob.'));
+    }
   });
 }

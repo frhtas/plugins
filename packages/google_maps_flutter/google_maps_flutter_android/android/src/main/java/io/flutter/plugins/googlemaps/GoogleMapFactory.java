@@ -37,10 +37,14 @@ public class GoogleMapFactory extends PlatformViewFactory {
     Map<String, Object> params = (Map<String, Object>) args;
     final GoogleMapBuilder builder = new GoogleMapBuilder();
 
-    Convert.interpretGoogleMapOptions(params.get("options"), builder);
+    final Object options = params.get("options");
+    Convert.interpretGoogleMapOptions(options, builder);
     if (params.containsKey("initialCameraPosition")) {
       CameraPosition position = Convert.toCameraPosition(params.get("initialCameraPosition"));
       builder.setInitialCameraPosition(position);
+    }
+    if (params.containsKey("clusterManagersToAdd")) {
+      builder.setInitialClusterManagers(params.get("clusterManagersToAdd"));
     }
     if (params.containsKey("markersToAdd")) {
       builder.setInitialMarkers(params.get("markersToAdd"));
@@ -57,6 +61,11 @@ public class GoogleMapFactory extends PlatformViewFactory {
     if (params.containsKey("tileOverlaysToAdd")) {
       builder.setInitialTileOverlays((List<Map<String, ?>>) params.get("tileOverlaysToAdd"));
     }
+    final Object cloudMapId = ((Map<?, ?>) options).get("cloudMapId");
+    if (cloudMapId != null) {
+      builder.setMapId((String) cloudMapId);
+    }
+
     return builder.build(id, context, binaryMessenger, lifecycleProvider);
   }
 }

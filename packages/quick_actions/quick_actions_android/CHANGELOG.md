@@ -1,3 +1,36 @@
+## 1.0.14
+
+* Updates AGP version to 8.4.1.
+
+## 1.0.13
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 1.0.12
+
+* Switches from using `ShortcutManager` to `ShortcutManagerCompat`.
+
+## 1.0.11
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+* Updates compileSdk version to 34.
+
+## 1.0.10
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 1.0.9
+
+* Changes method channels to pigeon.
+
+## 1.0.8
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
 ## 1.0.7
 
 * Adjusts SDK checks for better testability.

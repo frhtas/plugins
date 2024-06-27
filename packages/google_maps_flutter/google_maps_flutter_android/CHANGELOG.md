@@ -1,5 +1,65 @@
-## NEXT
+## 2.10.0
 
+* Converts some platform calls to Pigeon.
+
+## 2.9.1
+
+* Converts inspector interface platform calls to Pigeon.
+
+## 2.9.0
+
+* Adds support for BitmapDescriptor classes `AssetMapBitmap` and `BytesMapBitmap`.
+
+## 2.8.1
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 2.8.0
+
+* Adds support for marker clustering.
+
+## 2.7.0
+
+* Adds support for `MapConfiguration.style`.
+* Adds support for `getStyleError`.
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates compileSdk version to 34.
+
+## 2.6.2
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 2.6.1
+
+* Fixes new lint warnings.
+
+## 2.6.0
+
+* Fixes missing updates in TLHC mode.
+* Switched default display mode to TLHC mode.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 2.5.3
+
+* Updates `com.google.android.gms:play-services-maps` to 18.2.0.
+
+## 2.5.2
+
+* Updates annotations lib to 1.7.0.
+
+## 2.5.1
+
+* Adds pub topics to package metadata.
+
+## 2.5.0
+
+* Adds implementation for `cloudMapId` parameter to support cloud-based map styling.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 2.4.16
+
+* Removes old empty override methods.
 * Fixes unawaited_futures violations.
 
 ## 2.4.15

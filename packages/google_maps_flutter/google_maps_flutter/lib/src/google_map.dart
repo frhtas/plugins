@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of google_maps_flutter;
+part of '../google_maps_flutter.dart';
 
 /// Callback method for when the map is ready to be used.
 ///
@@ -52,7 +52,7 @@ class AndroidGoogleMapsFlutter {
   /// This implementation uses hybrid composition to render the Google Maps
   /// Widget on Android. This comes at the cost of some performance on Android
   /// versions below 10. See
-  /// https://flutter.dev/docs/development/platform-integration/platform-views#performance for more
+  /// https://docs.flutter.dev/platform-integration/android/platform-views#performance for more
   /// information.
   @Deprecated(
       'See https://pub.dev/packages/google_maps_flutter_android#display-mode')
@@ -70,7 +70,7 @@ class AndroidGoogleMapsFlutter {
   /// This implementation uses hybrid composition to render the Google Maps
   /// Widget on Android. This comes at the cost of some performance on Android
   /// versions below 10. See
-  /// https://flutter.dev/docs/development/platform-integration/platform-views#performance for more
+  /// https://docs.flutter.dev/platform-integration/android/platform-views#performance for more
   /// information.
   @Deprecated(
       'See https://pub.dev/packages/google_maps_flutter_android#display-mode')
@@ -91,8 +91,10 @@ class GoogleMap extends StatefulWidget {
   const GoogleMap({
     super.key,
     required this.initialCameraPosition,
+    this.style,
     this.onMapCreated,
     this.gestureRecognizers = const <Factory<OneSequenceGestureRecognizer>>{},
+    this.webGestureHandling,
     this.compassEnabled = true,
     this.mapToolbarEnabled = true,
     this.cameraTargetBounds = CameraTargetBounds.unbounded,
@@ -104,6 +106,7 @@ class GoogleMap extends StatefulWidget {
     this.zoomGesturesEnabled = true,
     this.liteModeEnabled = false,
     this.tiltGesturesEnabled = true,
+    this.fortyFiveDegreeImageryEnabled = false,
     this.myLocationEnabled = false,
     this.myLocationButtonEnabled = true,
     this.layoutDirection,
@@ -123,6 +126,7 @@ class GoogleMap extends StatefulWidget {
     this.onCameraIdle,
     this.onTap,
     this.onLongPress,
+    this.cloudMapId,
   });
 
   /// Callback method for when the map is ready to be used.
@@ -132,6 +136,19 @@ class GoogleMap extends StatefulWidget {
 
   /// The initial position of the map's camera.
   final CameraPosition initialCameraPosition;
+
+  /// The style for the map.
+  ///
+  /// Set to null to clear any previous custom styling.
+  ///
+  /// If problems were detected with the [mapStyle], including un-parsable
+  /// styling JSON, unrecognized feature type, unrecognized element type, or
+  /// invalid styler keys, the style is left unchanged, and the error can be
+  /// retrieved with [GoogleMapController.getStyleError].
+  ///
+  /// The style string can be generated using the
+  /// [map style tool](https://mapstyle.withgoogle.com/).
+  final String? style;
 
   /// True if the map should show a compass when rotated.
   final bool compassEnabled;
@@ -178,6 +195,9 @@ class GoogleMap extends StatefulWidget {
 
   /// True if the map view should respond to tilt gestures.
   final bool tiltGesturesEnabled;
+
+  /// True if 45 degree imagery should be enabled. Web only.
+  final bool fortyFiveDegreeImageryEnabled;
 
   /// Padding to be set on map. See https://developers.google.com/maps/documentation/android-sdk/map#map_padding for more details.
   final EdgeInsets padding;
@@ -281,6 +301,17 @@ class GoogleMap extends StatefulWidget {
   /// When this set is empty, the map will only handle pointer events for gestures that
   /// were not claimed by any other gesture recognizer.
   final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers;
+
+  /// This setting controls how the API handles gestures on the map. Web only.
+  ///
+  /// See [WebGestureHandling] for more details.
+  final WebGestureHandling? webGestureHandling;
+
+  /// Identifier that's associated with a specific cloud-based map style.
+  ///
+  /// See https://developers.google.com/maps/documentation/get-map-id
+  /// for more details.
+  final String? cloudMapId;
 
   /// Creates a [State] for this [GoogleMap].
   @override
@@ -518,6 +549,7 @@ class _GoogleMapState extends State<GoogleMap> {
 MapConfiguration _configurationFromMapWidget(GoogleMap map) {
   assert(!map.liteModeEnabled || Platform.isAndroid);
   return MapConfiguration(
+    webGestureHandling: map.webGestureHandling,
     compassEnabled: map.compassEnabled,
     mapToolbarEnabled: map.mapToolbarEnabled,
     cameraTargetBounds: map.cameraTargetBounds,
@@ -526,6 +558,7 @@ MapConfiguration _configurationFromMapWidget(GoogleMap map) {
     rotateGesturesEnabled: map.rotateGesturesEnabled,
     scrollGesturesEnabled: map.scrollGesturesEnabled,
     tiltGesturesEnabled: map.tiltGesturesEnabled,
+    fortyFiveDegreeImageryEnabled: map.fortyFiveDegreeImageryEnabled,
     trackCameraPosition: map.onCameraMove != null,
     zoomControlsEnabled: map.zoomControlsEnabled,
     zoomGesturesEnabled: map.zoomGesturesEnabled,
@@ -536,5 +569,9 @@ MapConfiguration _configurationFromMapWidget(GoogleMap map) {
     indoorViewEnabled: map.indoorViewEnabled,
     trafficEnabled: map.trafficEnabled,
     buildingsEnabled: map.buildingsEnabled,
+    cloudMapId: map.cloudMapId,
+    // A null style in the widget means no style, which is expressed as '' in
+    // the configuration to distinguish from no change (null).
+    style: map.style ?? '',
   );
 }

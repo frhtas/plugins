@@ -4,11 +4,9 @@
 
 import 'dart:html';
 import 'dart:js_util' as js_util;
-// TODO(a14n): remove this import once Flutter 3.1 or later reaches stable (including flutter/flutter#106316)
-// ignore: unnecessary_import
-import 'dart:ui';
 
 import 'package:camera_platform_interface/camera_platform_interface.dart';
+// ignore_for_file: implementation_imports
 import 'package:camera_web/src/camera.dart';
 import 'package:camera_web/src/camera_service.dart';
 import 'package:camera_web/src/shims/dart_js_util.dart';
@@ -916,5 +914,3 @@ void main() {
     });
   });
 }
-
-class JSNoSuchMethodError implements Exception {}

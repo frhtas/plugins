@@ -1,3 +1,26 @@
+## NEXT
+
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 1.4.0
+
+* Adds `getCountryCode` API.
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+
+## 1.3.7
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 1.3.6
+
+* Updates documentation reference of `finishPurchase` to `completePurchase`.
+
+## 1.3.5
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
 ## 1.3.4
 
 * Removes obsolete null checks on non-nullable values.
@@ -21,7 +44,7 @@
 
 ## 1.3.0
 
-* Added new `PurchaseStatus` named `canceled` to distinguish between an error and user cancellation. 
+* Added new `PurchaseStatus` named `canceled` to distinguish between an error and user cancellation.
 
 ## 1.2.0
 

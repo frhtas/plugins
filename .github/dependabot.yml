@@ -108,17 +108,6 @@ updates:
         update-types: ["version-update:semver-minor", "version-update:semver-patch"]
 
   - package-ecosystem: "gradle"
-    directory: "/packages/dynamic_layouts/example/android/app"
-    commit-message:
-      prefix: "[dynamic_lyts]"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
-
-  - package-ecosystem: "gradle"
     directory: "/packages/espresso/android"
     commit-message:
       prefix: "[espresso]"
@@ -186,6 +175,8 @@ updates:
         update-types: ["version-update:semver-minor", "version-update:semver-patch"]
       - dependency-name: "androidx.test:*"
         update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+      - dependency-name: "org.robolectric:*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
 
   - package-ecosystem: "gradle"
     directory: "/packages/file_selector/file_selector_android/example/android/app"
@@ -202,6 +193,17 @@ updates:
     directory: "/packages/flutter_adaptive_scaffold/example/android/app"
     commit-message:
       prefix: "[scaffold]"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+
+  - package-ecosystem: "gradle"
+    directory: "/packages/flutter_image/example/android/app"
+    commit-message:
+      prefix: "[flutter_image]"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
@@ -385,6 +387,34 @@ updates:
         update-types: ["version-update:semver-minor", "version-update:semver-patch"]
 
   - package-ecosystem: "gradle"
+    directory: "/packages/interactive_media_ads/android"
+    commit-message:
+      prefix: "[interactive_media_ads]"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "com.android.tools.build:gradle"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+      - dependency-name: "junit:junit"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+      - dependency-name: "org.mockito:*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+      - dependency-name: "androidx.test:*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+
+  - package-ecosystem: "gradle"
+    directory: "/packages/interactive_media_ads/example/android/app"
+    commit-message:
+      prefix: "[interactive_media_ads]"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+
+  - package-ecosystem: "gradle"
     directory: "/packages/image_picker/image_picker/example/android/app"
     commit-message:
       prefix: "[image_picker]"
@@ -535,6 +565,17 @@ updates:
       - dependency-name: "androidx.test:*"
         update-types: ["version-update:semver-minor", "version-update:semver-patch"]
       - dependency-name: "org.robolectric:*"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+
+  - package-ecosystem: "gradle"
+    directory: "/packages/platform/example/android/app"
+    commit-message:
+      prefix: "[platform]"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
         update-types: ["version-update:semver-minor", "version-update:semver-patch"]
 
   - package-ecosystem: "gradle"
@@ -711,6 +752,17 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+
+  - package-ecosystem: "gradle"
+    directory: "/packages/two_dimensional_scrollables/example/android/app"
+    commit-message:
+      prefix: "[2D_scrollables]"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    ignore:
+    - dependency-name: "*"
+      update-types: [ "version-update:semver-minor", "version-update:semver-patch" ]
 
   - package-ecosystem: "gradle"
     directory: "/packages/url_launcher/url_launcher_android/android"

@@ -20,13 +20,27 @@ void main() {
   testWidgets('getApplicationDocumentsDirectory', (WidgetTester tester) async {
     final PathProviderPlatform provider = PathProviderPlatform.instance;
     final String? result = await provider.getApplicationDocumentsPath();
-    _verifySampleFile(result, 'applicationDocuments');
+    if (Platform.isMacOS) {
+      // _verifySampleFile causes hangs in driver when sandboxing is disabled
+      // because the path changes from an app specific directory to
+      // ~/Documents, which requires additional permissions to access on macOS.
+      // Instead, validate that a non-empty path was returned.
+      expect(result, isNotEmpty);
+    } else {
+      _verifySampleFile(result, 'applicationDocuments');
+    }
   });
 
   testWidgets('getApplicationSupportDirectory', (WidgetTester tester) async {
     final PathProviderPlatform provider = PathProviderPlatform.instance;
     final String? result = await provider.getApplicationSupportPath();
     _verifySampleFile(result, 'applicationSupport');
+  });
+
+  testWidgets('getApplicationCacheDirectory', (WidgetTester tester) async {
+    final PathProviderPlatform provider = PathProviderPlatform.instance;
+    final String? result = await provider.getApplicationCachePath();
+    _verifySampleFile(result, 'applicationCache');
   });
 
   testWidgets('getLibraryDirectory', (WidgetTester tester) async {

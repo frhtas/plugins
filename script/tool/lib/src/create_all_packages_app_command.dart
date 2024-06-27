@@ -107,7 +107,8 @@ class CreateAllPackagesAppCommand extends PackageCommand {
 
     await Future.wait(<Future<void>>[
       _updateAppGradle(),
-      _updateMacosPbxproj(),
+      _updateIOSPbxproj(),
+      _updateMacOSPbxproj(),
       // This step requires the native file generation triggered by
       // flutter pub get above, so can't currently be run on Windows.
       if (!platform.isWindows) _updateMacosPodfile(),
@@ -236,8 +237,7 @@ dependencies {}
       replacements: <String, List<String>>{
         // minSdkVersion 21 is required by camera_android.
         'minSdkVersion': <String>['minSdkVersion 21'],
-        // compileSdkVersion 33 is required by local_auth.
-        'compileSdkVersion': <String>['compileSdkVersion 33'],
+        'compileSdkVersion': <String>['compileSdk 34'],
       },
       additions: <String, List<String>>{
         'defaultConfig {': <String>['        multiDexEnabled true'],
@@ -293,6 +293,20 @@ dependencies {}
       },
       dependencyOverrides: pluginDeps,
     );
+
+    // An application cannot depend directly on multiple federated
+    // implementations of the same plugin for the same platform, which means the
+    // app cannot directly depend on both camera_android and
+    // camera_android_androidx. Since camera_android is endorsed, it will be
+    // included transitively already, so exclude it from the direct dependency
+    // list to allow including camera_android_androidx to ensure that they don't
+    // conflict at build time (if they did, it would be impossible to use
+    // camera_android_androidx while camera_android is endorsed).
+    // This is special-cased here, rather than being done via the normal
+    // exclusion config file mechanism, because it still needs to be in the
+    // depenedency overrides list to ensure that the version from path is used.
+    pubspec.dependencies.remove('camera_android');
+
     app.pubspecFile.writeAsStringSync(_pubspecToString(pubspec));
   }
 
@@ -391,7 +405,7 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
     );
   }
 
-  Future<void> _updateMacosPbxproj() async {
+  Future<void> _updateMacOSPbxproj() async {
     final File pbxprojFile = app
         .platformDirectory(FlutterPlatform.macos)
         .childDirectory('Runner.xcodeproj')
@@ -402,6 +416,22 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
         // macOS 10.15 is required by in_app_purchase.
         'MACOSX_DEPLOYMENT_TARGET': <String>[
           '				MACOSX_DEPLOYMENT_TARGET = 10.15;'
+        ],
+      },
+    );
+  }
+
+  Future<void> _updateIOSPbxproj() async {
+    final File pbxprojFile = app
+        .platformDirectory(FlutterPlatform.ios)
+        .childDirectory('Runner.xcodeproj')
+        .childFile('project.pbxproj');
+    _adjustFile(
+      pbxprojFile,
+      replacements: <String, List<String>>{
+        // iOS 14 is required by google_maps_flutter.
+        'IPHONEOS_DEPLOYMENT_TARGET': <String>[
+          '				IPHONEOS_DEPLOYMENT_TARGET = 14.0;'
         ],
       },
     );

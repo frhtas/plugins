@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'image_test_mocks.dart';
 import 'utils.dart';
 
+bool isRunningInStable = io.Platform.environment['CHANNEL'] == 'stable';
+
 void main() => defineTests();
 
 void defineTests() {
@@ -33,14 +35,13 @@ void defineTests() {
           ),
         );
 
-        final Iterable<RichText> texts =
-            tester.widgetList(find.byType(RichText));
-        final RichText firstTextWidget = texts.first;
-        final TextSpan firstTextSpan = firstTextWidget.text as TextSpan;
+        final Iterable<Text> texts = tester.widgetList(find.byType(Text));
+        final Text firstTextWidget = texts.first;
+        final TextSpan firstTextSpan = firstTextWidget.textSpan! as TextSpan;
         final Image image = tester.widget(find.byType(Image));
         final NetworkImage networkImage = image.image as NetworkImage;
-        final RichText secondTextWidget = texts.last;
-        final TextSpan secondTextSpan = secondTextWidget.text as TextSpan;
+        final Text secondTextWidget = texts.last;
+        final TextSpan secondTextSpan = secondTextWidget.textSpan! as TextSpan;
 
         expect(firstTextSpan.text, 'textbefore ');
         expect(firstTextSpan.style!.fontStyle, FontStyle.italic);
@@ -168,8 +169,9 @@ void defineTests() {
 
         await expectLater(
             find.byType(Container),
-            matchesGoldenFile(
-                'assets/images/golden/image_test/resource_asset_logo.png'));
+            matchesGoldenFile(isRunningInStable
+                ? 'assets/images/golden/image_test/resource_asset_logo_old.png'
+                : 'assets/images/golden/image_test/resource_asset_logo.png'));
       },
       skip: kIsWeb, // Goldens are platform-specific.
     );
@@ -203,8 +205,8 @@ void defineTests() {
           ),
         );
 
-        final RichText richText = tester.widget(find.byType(RichText));
-        final TextSpan textSpan = richText.text as TextSpan;
+        final Text text = tester.widget(find.byType(Text));
+        final TextSpan textSpan = text.textSpan! as TextSpan;
         expect(textSpan.text, 'Hello ');
         expect(textSpan.style, isNotNull);
       },
@@ -262,14 +264,13 @@ void defineTests() {
             tester.widget(find.byType(GestureDetector));
         detector.onTap!();
 
-        final Iterable<RichText> texts =
-            tester.widgetList(find.byType(RichText));
-        final RichText firstTextWidget = texts.first;
-        final TextSpan firstSpan = firstTextWidget.text as TextSpan;
+        final Iterable<Text> texts = tester.widgetList(find.byType(Text));
+        final Text firstTextWidget = texts.first;
+        final TextSpan firstSpan = firstTextWidget.textSpan! as TextSpan;
         (firstSpan.recognizer as TapGestureRecognizer?)!.onTap!();
 
-        final RichText lastTextWidget = texts.last;
-        final TextSpan lastSpan = lastTextWidget.text as TextSpan;
+        final Text lastTextWidget = texts.last;
+        final TextSpan lastSpan = lastTextWidget.textSpan! as TextSpan;
         (lastSpan.recognizer as TapGestureRecognizer?)!.onTap!();
 
         expect(firstSpan.children, null);
@@ -307,18 +308,17 @@ void defineTests() {
           ),
         );
 
-        final Iterable<RichText> texts =
-            tester.widgetList(find.byType(RichText));
-        final RichText firstTextWidget = texts.first;
-        final TextSpan firstSpan = firstTextWidget.text as TextSpan;
+        final Iterable<Text> texts = tester.widgetList(find.byType(Text));
+        final Text firstTextWidget = texts.first;
+        final TextSpan firstSpan = firstTextWidget.textSpan! as TextSpan;
         (firstSpan.recognizer as TapGestureRecognizer?)!.onTap!();
 
         final GestureDetector detector =
             tester.widget(find.byType(GestureDetector));
         detector.onTap!();
 
-        final RichText lastTextWidget = texts.last;
-        final TextSpan lastSpan = lastTextWidget.text as TextSpan;
+        final Text lastTextWidget = texts.last;
+        final TextSpan lastSpan = lastTextWidget.textSpan! as TextSpan;
         (lastSpan.recognizer as TapGestureRecognizer?)!.onTap!();
 
         expect(firstSpan.children, null);
@@ -333,6 +333,42 @@ void defineTests() {
         expect(tapTexts, <String>['Link before', 'alt', 'link after']);
         expect(tapResults.length, 3);
         expect(tapResults, <String>['firstHref', 'imageHref', 'secondHref']);
+      },
+    );
+
+    testWidgets(
+      'should gracefully handle width parsing failures',
+      (WidgetTester tester) async {
+        const String data = '![alt](https://img#x50)';
+        await tester.pumpWidget(
+          boilerplate(
+            const Markdown(data: data),
+          ),
+        );
+
+        final Image image = tester.widget(find.byType(Image));
+        final NetworkImage networkImage = image.image as NetworkImage;
+        expect(networkImage.url, 'https://img');
+        expect(image.width, null);
+        expect(image.height, 50);
+      },
+    );
+
+    testWidgets(
+      'should gracefully handle height parsing failures',
+      (WidgetTester tester) async {
+        const String data = ' ![alt](https://img#50x)';
+        await tester.pumpWidget(
+          boilerplate(
+            const Markdown(data: data),
+          ),
+        );
+
+        final Image image = tester.widget(find.byType(Image));
+        final NetworkImage networkImage = image.image as NetworkImage;
+        expect(networkImage.url, 'https://img');
+        expect(image.width, 50);
+        expect(image.height, null);
       },
     );
 
@@ -380,8 +416,9 @@ void defineTests() {
 
         await expectLater(
             find.byType(Container),
-            matchesGoldenFile(
-                'assets/images/golden/image_test/custom_builder_asset_logo.png'));
+            matchesGoldenFile(isRunningInStable
+                ? 'assets/images/golden/image_test/custom_builder_asset_logo_old.png'
+                : 'assets/images/golden/image_test/custom_builder_asset_logo.png'));
       },
       skip: kIsWeb, // Goldens are platform-specific.
     );
